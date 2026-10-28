@@ -1,0 +1,23 @@
+﻿# Secrets and certificate material
+.env
+.env.*
+!.env.example
+certs/
+*.key
+*.pem
+*.cer
+*.crt
+*.p12
+*.pfx
+
+# Local development server and tools
+logs/
+tools/
+Caddyfile
+allow-web-ports.ps1
+node_modules/
+
+# Local machine/editor files
+.DS_Store
+Thumbs.db
+.vscode/

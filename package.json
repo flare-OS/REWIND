@@ -1,9 +1,15 @@
 {
-  "name": "rwd-local-website",
+  "name": "rewind-platform",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.js",
     "proxy": "tools\\caddy.exe run --config Caddyfile --adapter caddyfile"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
+    "@neondatabase/serverless": "^1.2.0"
   }
 }
