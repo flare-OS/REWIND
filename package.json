@@ -1,0 +1,9 @@
+{
+  "name": "rwd-local-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "proxy": "tools\\caddy.exe run --config Caddyfile --adapter caddyfile"
+  }
+}
