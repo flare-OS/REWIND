@@ -18,6 +18,7 @@ export default async function handler(req,res) {
     }
     if (req.method==='POST') {
       const user=await requireUser(req,res), data=body(req); if (!user) return;
+      if(user.role==='user'){const [account]=await sql()`SELECT plan FROM users WHERE id=${user.id}`;if(!['neptune','pluto','supernova'].includes(account?.plan))return fail(res,403,'Uploading community assets requires the Neptune plan or above.');}
       const type=String(data.assetType||''), name=String(data.name||'').trim(), mime=String(data.mimeType||''), size=Number(data.byteSize);
       if (!limits[type] || !name || name.length>100 || !(types[type]||[]).includes(mime) || !Number.isSafeInteger(size) || size<1 || size>limits[type]) return fail(res,400,'That file type or size is not allowed.');
       for (const key of ['S3_ENDPOINT','S3_REGION','S3_BUCKET','S3_ACCESS_KEY_ID','S3_SECRET_ACCESS_KEY']) if (!process.env[key]) return fail(res,503,'Bucket storage is not configured. Add S3-compatible credentials to the API environment.');

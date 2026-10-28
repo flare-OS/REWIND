@@ -32,8 +32,6 @@ export default async function handler(req,res) {
       const [existing] = await sql()`SELECT id FROM users WHERE username_key=${normalized} LIMIT 1`;
       if (existing) return fail(res,409,'That username is already taken.');
       if (cleanEmail) { const [emailExists]=await sql()`SELECT id FROM users WHERE email=${cleanEmail} LIMIT 1`; if (emailExists) return fail(res,409,'That email is already in use.'); }
-      // New accounts are never granted elevated access during public signup.
-      // Promote the intended first owner directly in Neon after signup.
       const id = uid(), role = 'user';
       const passwordHash = await hashPassword(password);
       const [user] = await sql()`INSERT INTO users (id,username,username_key,email,password_hash,role,date_of_birth,terms_accepted_at,terms_version,privacy_acknowledged_at) VALUES (${id},${clean},${normalized},${cleanEmail || null},${passwordHash},${role},${dateOfBirth},NOW(),'2026-10-28-v1',NOW()) RETURNING id,username,role,avatar`;

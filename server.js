@@ -25,6 +25,8 @@ async function localApi(req,res,pathname) {
   else if (pieces[1]==='admin') modulePath='./api/admin/index.js';
   else if (pieces[1]==='avatar') modulePath='./api/avatar.js';
   else if (pieces[1]==='guardian') modulePath='./api/guardian.js';
+  else if (pieces[1]==='account') modulePath='./api/account.js';
+  else if (pieces[1]==='multiplayer') modulePath='./api/multiplayer.js';
   else if (pieces[1]==='health') modulePath='./api/health.js';
   if (!modulePath) { res.writeHead(404,{'Content-Type':'application/json'}).end('{"error":"API route not found."}'); return; }
   let rawBody='';

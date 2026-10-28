@@ -55,3 +55,11 @@ git push origin main
 ```
 
 Check the second `git status` before committing. `.env`, certificates/private keys, local logs, and local server tools are ignored by `.gitignore`; never force-add them.
+
+## Orbs, creator plans, reports, and server scripts
+
+Run the updated `db/schema.sql` against the same Neon database used by the API before deploying these changes. It adds plan balances, report records, experience data, script storage, multiplayer presence, and runtime tracking; it also promotes an existing `lunastral` account to `owner`. Create the `lunastral` account first, then run the schema migration so it receives full owner permissions. Public signup does not grant elevated roles based on a claimed username.
+
+`GET /api/account` grants the once-per-UTC-day 5 Orb sign-in bonus plus the active plan allowance. `POST /api/account` supports `upgrade` (Orb or lifetime playtime threshold), `playtime` (heartbeat accounting), and `report`. `GET /api/multiplayer?placeId=...` and its `heartbeat` action provide basic live player counts. The `save_script` action stores LocalScript/ServerScript source. `get` and `set` actions provide bounded per-experience JSON key-value storage for leaderboards and similar prototypes.
+
+This is an early backend foundation: presence counts and persistence are available, but there is no authoritative real-time simulation, avatar replication, friend graph, gamepass commerce, or sandboxed server Luau runtime yet. Server scripts are saved as source and do not execute. The browser must not be treated as trusted for game state. Plan friend allowances are currently displayed as entitlements; a friend system/profile page is not implemented.

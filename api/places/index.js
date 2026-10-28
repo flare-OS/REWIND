@@ -17,6 +17,8 @@ export default async function handler(req,res) {
     }
     if (req.method === 'POST') {
       const user=await requireUser(req,res); if (!user) return;
+      const [[account]]=await Promise.all([sql()`SELECT plan,created_at FROM users WHERE id=${user.id}`]);
+      if(account.plan==='free'&&new Date(account.created_at).getTime()+86400000>Date.now())return fail(res,403,'Free accounts must wait 1 day after signup before creating a place.');
       const data=body(req), name=String(data.name||'').trim();
       if (name.length < 1 || name.length > 60) return fail(res,400,'Place name must be 1–60 characters.');
       const description=String(data.description||'').slice(0,2000), genre=String(data.genre||'All').slice(0,40);

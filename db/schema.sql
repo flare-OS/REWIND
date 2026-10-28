@@ -17,6 +17,14 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_acknowledged_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free','neptune','pluto','supernova'));
+ALTER TABLE users ADD COLUMN IF NOT EXISTS orbs INTEGER NOT NULL DEFAULT 0 CHECK (orbs >= 0);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS play_seconds BIGINT NOT NULL DEFAULT 0 CHECK (play_seconds >= 0);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_orb_claim DATE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS starcode TEXT UNIQUE;
+
+-- The requested creator account receives the full owner role when registered.
+UPDATE users SET role='owner' WHERE username_key='lunastral';
 
 CREATE TABLE IF NOT EXISTS sessions (
   id UUID PRIMARY KEY,
@@ -61,6 +69,52 @@ ALTER TABLE places ADD COLUMN IF NOT EXISTS requires_supervision BOOLEAN NOT NUL
 
 CREATE INDEX IF NOT EXISTS places_owner_id_idx ON places(owner_id);
 CREATE INDEX IF NOT EXISTS places_published_idx ON places(published, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS place_scripts (
+  id UUID PRIMARY KEY,
+  place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  script_type TEXT NOT NULL CHECK (script_type IN ('client','server')),
+  source TEXT NOT NULL DEFAULT '',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(place_id,name,script_type)
+);
+
+CREATE TABLE IF NOT EXISTS place_datastore (
+  place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+  store_name TEXT NOT NULL,
+  data_key TEXT NOT NULL,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY(place_id,store_name,data_key)
+);
+
+CREATE TABLE IF NOT EXISTS place_sessions (
+  id UUID PRIMARY KEY,
+  place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(place_id,user_id)
+);
+CREATE INDEX IF NOT EXISTS place_sessions_live_idx ON place_sessions(place_id,last_seen_at);
+CREATE TABLE IF NOT EXISTS experience_runtime (
+  place_id UUID PRIMARY KEY REFERENCES places(id) ON DELETE CASCADE,
+  seconds BIGINT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+  id UUID PRIMARY KEY,
+  reporter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_type TEXT NOT NULL CHECK (target_type IN ('user','place','asset')),
+  target_id UUID NOT NULL,
+  reason TEXT NOT NULL,
+  details TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','reviewing','resolved','dismissed')),
+  reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS reports_status_idx ON reports(status,created_at DESC);
 
 CREATE TABLE IF NOT EXISTS assets (
   id UUID PRIMARY KEY,

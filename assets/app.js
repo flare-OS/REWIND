@@ -63,6 +63,7 @@ async function loadSession() {
     if (['owner','asset_mod'].includes(user.role) && !document.querySelector('#admin-link')) { const link=document.createElement('a');link.id='admin-link';link.href='admin/';link.className='button button-quiet';link.textContent='Admin';chip.before(link); }
     try { const family=await api('guardian'); document.querySelector('#guardian-link').classList.toggle('hidden',!(family.age<15||family.requests?.length||family.link?.supervisor_user_id===family.viewerId)); } catch { document.querySelector('#guardian-link').classList.add('hidden'); }
     const logout = document.querySelector('#logout-button'); if (!logout) { const out=document.createElement('button');out.id='logout-button';out.className='button button-quiet';out.textContent='Log out';out.onclick=async()=>{try{await api('auth/logout',{method:'POST'});location.reload()}catch(e){alert(e.message)}};chip.after(out); }
+    await loadAccount();
     return user;
   } catch { return null; }
 }
@@ -76,5 +77,7 @@ async function loadPlaces() {
   } catch { /* API can be configured separately after the static site is deployed. */ }
 }
 function escapeHtml(value = '') { return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function loadAccount(){const panel=document.querySelector('#account-plan-panel');if(!panel)return;try{const {account,entitlements,choices}=await api('account');panel.className='admin-card';panel.innerHTML=`<b>${escapeHtml(account.plan.toUpperCase())} plan · ${account.orbs} Orbs</b><p>${Math.floor(account.play_seconds/60)} minutes playtime · Friend limit ${entitlements.friends??'unlimited'} · Daily allowance ${entitlements.daily} Orbs${account.starcode?` · Starcode ${escapeHtml(account.starcode)}`:''}</p>${Object.entries(choices).map(([plan,c])=>`<button class="button button-outline" data-upgrade="${plan}">Get ${plan} · ${c.orbs} Orbs or ${c.seconds/60} minutes playtime</button>`).join('')}`;panel.querySelectorAll('[data-upgrade]').forEach(button=>button.onclick=async()=>{const plan=button.dataset.upgrade,choice=choices[plan],method=confirm(`Use ${choice.orbs} Orbs? Choose Cancel to use the required playtime instead.`)?'orbs':'playtime';try{await api('account',{method:'POST',body:JSON.stringify({action:'upgrade',plan,method})});await loadAccount()}catch(e){alert(e.message)}})}catch{panel.textContent='Log in to claim daily Orbs and view your plan.'}}
+document.querySelector('#report-form')?.addEventListener('submit',async event=>{event.preventDefault();const data=Object.fromEntries(new FormData(event.currentTarget));const message=document.querySelector('#report-message');try{await api('account',{method:'POST',body:JSON.stringify({action:'report',...data})});message.textContent='Report submitted for review.';event.currentTarget.reset()}catch(e){message.textContent=e.message}});
 document.querySelector('#refresh-places')?.addEventListener('click', loadPlaces);
 loadSession(); loadPlaces();
