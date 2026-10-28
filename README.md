@@ -2,7 +2,7 @@
 
 REWIND is a browser based creator platform prototype. The frontend is a static GitHub Pages site; the Node API can run as a Render web service using `server.js` and the deployment template in `render.yaml`.
 
-Legal pages are published at [`privacy.html`](privacy.html), [`terms-of-service.html`](terms-of-service.html), and [`terms-of-use.html`](terms-of-use.html). The contact email is `sosozouzou130@gmail.com`; the operator mailing address and active service regions still need confirmation.
+Legal pages are published at [`privacy.html`](privacy.html), [`terms-of-service.html`](terms-of-service.html), and [`terms-of-use.html`](terms-of-use.html). The contact email is `sosozouzou130@gmail.com`; the postal code is 39000, France. Active service regions still need confirmation.
 
 ## Features in this build
 
@@ -10,7 +10,7 @@ Legal pages are published at [`privacy.html`](privacy.html), [`terms-of-service.
 - 13- and 14-year-old accounts can request approval from a linked 15+ supervisor account. Creators can mark places as requiring approved supervision.
 - Public signup creates regular user accounts. The schema promotes `lunastral` to Owner when it is applied after that account exists; Owner can also assign roles in the admin panel.
 - Create, save, and publish places with name, description, genre, scene data, and optional icon/thumbnail.
-- A combined `/editor/` scene, UI, Luau source, and animation workspace. It includes blocks, spheres, pyramids, a simple rig, move/scale controls, and Frame/TextLabel/ImageLabel/TextButton/ScreenGui insertion.
+- The previous browser studio is preserved at `/archive/editor/`; `/editor/` is now an informational landing page. A separate Windows application is in the sibling `Editor/` folder with local 3D scene editing, project file open/save, object properties, and a basic physics playtest.
 - A 3D avatar editor that saves avatar appearance.
 - Owner and Asset Mod admin panels for reviewing uploaded icons, thumbnails, audio, decals, and models. Owners can assign roles.
 - S3-compatible signed uploads. Neon is used for PostgreSQL data; it is not the file bucket.
@@ -18,7 +18,7 @@ Legal pages are published at [`privacy.html`](privacy.html), [`terms-of-service.
 - Experience privacy settings, friends-only access, a 12-day activity feed, Orb-priced gamepasses, and experience badges.
 - Owner controls to grant Orbs and change a user's plan.
 
-The combined studio keeps the 3D scene and UI canvas visible together. Right-click the viewport to insert parts, interface objects, or script templates. Studio is blocked on phone-sized/coarse-touch screens. Luau Web 1.5.1 runs client source in a separate WebAssembly worker with a five-second limit. The suggestion list includes REWIND service-shaped snippets for players, data stores, badges, gamepasses, and leaderstats; these names do not connect to Roblox, and ServerScripts save as source but do not execute. The current animation editor is a basic rig/keyframe prototype.
+The desktop application uses a Studio-like ribbon, 3D viewport, Toolbox, Explorer, Properties, and Output panels. It saves `.rwdproj` files on the local computer and provides an F5 playtest with basic character movement, jumping, and collisions. Its Luau console runs in a WebAssembly worker with a five-second limit. This is an early independent editor: it does not run Roblox experiences or Roblox engine APIs, and multiplayer/server simulation, online publishing and full Luau engine services are not implemented.
 
 ## Local preview and API
 
@@ -33,7 +33,7 @@ The API needs the schema applied before signup/login will work. Local static fil
 
 ## Deploy the frontend to GitHub Pages
 
-Keep the repository's existing Pages source and custom domain (`rwd.2bd.net`). Commit and push the static site changes. The pages under `editor/`, `avatar/`, and `admin/` are ordinary static folders and work under both the custom domain and the repository Pages URL.
+Keep the repository's existing Pages source and custom domain (`rwd.2bd.net`). Commit and push the static site changes. The `editor/` route is a landing page and the archived browser workspace is at `archive/editor/`. The separate desktop application in the sibling `Editor/` folder is not included in the GitHub Pages build.
 
 ## Deploy the API
 
@@ -65,4 +65,4 @@ Run the updated `db/schema.sql` against the same Neon database used by the API b
 
 `GET /api/account` grants the once-per-UTC-day 5 Orb sign-in bonus plus the active plan allowance. `POST /api/account` supports `upgrade` (Orb or lifetime playtime threshold), `playtime` (heartbeat accounting), and `report`. `GET /api/multiplayer?placeId=...` and its `heartbeat` action provide basic live player counts. The `save_script` action stores LocalScript/ServerScript source. `get` and `set` actions provide bounded per-experience JSON key-value storage for leaderboards and similar prototypes. The new `/api/friends`, `/api/experiences`, and `/api/monetization` routes manage friend links, experience activity, gamepasses, and badges; gamepass Orbs and ownership are committed atomically.
 
-This is an early backend foundation: presence counts and persistence are available, but there is no authoritative real-time simulation, avatar replication, or sandboxed server Luau runtime yet. Server scripts are saved as source and do not execute. The browser must not be treated as trusted for game state. Friend requests and limits exist, but there is no standalone profile page or friend removal workflow yet. Marketplace and badge APIs are prototype features and do not connect to Roblox or process real-money payments.
+The website backend still has no authoritative real-time simulation, avatar replication, or sandboxed server Luau runtime. The new Windows editor is a separate local prototype; its playtest simulates simple movement and collisions but does not run server scripts or multiplayer. The desktop project files remain on the user-selected disk unless the creator separately uploads or publishes content through REWIND. Marketplace and badge APIs are REWIND prototypes and do not connect to Roblox or process real-money payments.

@@ -12,7 +12,7 @@ export default async function handler(req,res) {
         return json(res,200,{places});
       }
       const user=await requireUser(req,res); if (!user) return;
-      const places=await sql()`SELECT id,name,description,genre,published,privacy,requires_supervision,scene,icon_asset_id,thumbnail_asset_id,created_at,updated_at FROM places WHERE owner_id=${user.id} ORDER BY updated_at DESC`;
+      const places=await sql()`SELECT p.id,p.name,p.description,p.genre,p.published,p.privacy,p.requires_supervision,p.scene,p.icon_asset_id,p.thumbnail_asset_id,p.created_at,p.updated_at,a.public_url AS icon_url,t.public_url AS thumbnail_url FROM places p LEFT JOIN assets a ON a.id=p.icon_asset_id LEFT JOIN assets t ON t.id=p.thumbnail_asset_id WHERE p.owner_id=${user.id} ORDER BY p.updated_at DESC`;
       return json(res,200,{places});
     }
     if (req.method === 'POST') {
