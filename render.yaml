@@ -10,7 +10,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: CORS_ORIGINS
-        value: https://rwd.2bd.net,https://flare-os.github.io
+        value: https://rwd.2bd.net,https://www.rwd.2bd.net,https://flare-os.github.io
       - key: API_PUBLIC_URL
         value: https://api.rwd.2bd.net
       - key: DATABASE_URL

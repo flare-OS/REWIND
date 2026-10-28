@@ -20,7 +20,7 @@ The combined studio keeps the 3D scene and UI canvas visible together. Right-cli
 ## Local preview and API
 
 1. Create a Neon PostgreSQL database and run [`db/schema.sql`](db/schema.sql) in its SQL editor. If upgrading an existing database, run the updated schema again; it adds date-of-birth, supervision-link, and supervised-place fields.
-2. Fill in `.env` locally. Keep it private. Set `DATABASE_URL` and configure `CORS_ORIGINS` for the local site and your public site origins.
+2. Fill in `.env` locally. Keep it private. Set `DATABASE_URL` and configure `CORS_ORIGINS` for any additional exact site origins. The API already allows `https://rwd.2bd.net`, `https://www.rwd.2bd.net`, and `https://flare-os.github.io`.
 3. Add credentials for an S3-compatible bucket (`S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_PUBLIC_BASE_URL`). Configure that bucket to allow browser `PUT` requests from the frontend origins and public reads if you want approved assets to display.
 4. Run `npm install`, then `npm start`. Open `http://localhost:8080`.
 5. Create and log in to the `lunastral` account. In Neon SQL Editor, run `UPDATE users SET role = 'owner' WHERE username_key = 'lunastral';` to grant the Owner role. This direct database step avoids putting an owner secret in the signup endpoint or frontend.

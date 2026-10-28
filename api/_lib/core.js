@@ -64,8 +64,15 @@ export function setSession(res, token, clear = false) {
 }
 export function applyCors(req, res) {
   const origin = req.headers?.origin;
-  const allowed = String(process.env.CORS_ORIGINS || 'http://localhost:8080').split(',').map(x => x.trim()).filter(Boolean);
-  if (origin && allowed.includes(origin)) {
+  const builtInOrigins = [
+    'https://rwd.2bd.net',
+    'https://www.rwd.2bd.net',
+    'https://flare-os.github.io',
+    'http://localhost:8080',
+  ];
+  const configuredOrigins = String(process.env.CORS_ORIGINS || '').split(',').map(x => x.trim()).filter(Boolean);
+  const allowed = new Set([...builtInOrigins, ...configuredOrigins]);
+  if (origin && allowed.has(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Vary', 'Origin');
