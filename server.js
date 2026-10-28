@@ -27,6 +27,9 @@ async function localApi(req,res,pathname) {
   else if (pieces[1]==='guardian') modulePath='./api/guardian.js';
   else if (pieces[1]==='account') modulePath='./api/account.js';
   else if (pieces[1]==='multiplayer') modulePath='./api/multiplayer.js';
+  else if (pieces[1]==='experiences') modulePath='./api/experiences.js';
+  else if (pieces[1]==='monetization') modulePath='./api/monetization.js';
+  else if (pieces[1]==='friends') modulePath='./api/friends.js';
   else if (pieces[1]==='health') modulePath='./api/health.js';
   if (!modulePath) { res.writeHead(404,{'Content-Type':'application/json'}).end('{"error":"API route not found."}'); return; }
   let rawBody='';

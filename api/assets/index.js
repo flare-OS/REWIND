@@ -9,7 +9,7 @@ export default async function handler(req,res) {
   try {
     if (req.method==='GET') {
       if (new URL(req.url,'http://local').searchParams.get('catalog')==='true') {
-        const assets=await sql()`SELECT id,asset_type,name,description,public_url,mime_type,byte_size,created_at FROM assets WHERE status='approved' AND public_url IS NOT NULL AND asset_type IN ('model','audio','decal') ORDER BY created_at DESC LIMIT 100`;
+        const assets=await sql()`SELECT id,asset_type,name,description,public_url,mime_type,byte_size,created_at FROM assets WHERE status='approved' AND public_url IS NOT NULL AND asset_type IN ('game_icon','game_thumbnail','model','audio','decal') ORDER BY created_at DESC LIMIT 100`;
         return json(res,200,{assets});
       }
       const user=await requireUser(req,res); if (!user) return;

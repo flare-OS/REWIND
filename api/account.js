@@ -22,7 +22,8 @@ export default async function handler(req,res){if(applyCors(req,res))return;try{
    return json(res,200,{playSeconds:updated.play_seconds});
   }
   if(action==='report'){
-   const type=String(data.targetType||''),id=String(data.targetId||''),reason=String(data.reason||'').trim(),details=String(data.details||'').trim();
+   const type=String(data.targetType||''),rawId=String(data.targetId||'').trim(),reason=String(data.reason||'').trim(),details=String(data.details||'').trim();let id=rawId;
+   if(type==='user'&&!/^[0-9a-f-]{36}$/i.test(rawId)){const [target]=await sql()`SELECT id FROM users WHERE username_key=${rawId.toLowerCase()}`;id=target?.id||'';}
    if(!['user','place','asset'].includes(type)||! /^[0-9a-f-]{36}$/i.test(id)||reason.length<3||reason.length>120||details.length>2000)return fail(res,400,'Provide a valid target, reason, and details under 2,000 characters.');
    const [exists]= type==='user'?await sql()`SELECT id FROM users WHERE id=${id}`:type==='place'?await sql()`SELECT id FROM places WHERE id=${id}`:await sql()`SELECT id FROM assets WHERE id=${id}`;
    if(!exists)return fail(res,404,'Report target not found.');

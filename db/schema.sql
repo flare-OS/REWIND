@@ -19,6 +19,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_acknowledged_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free','neptune','pluto','supernova'));
 ALTER TABLE users ADD COLUMN IF NOT EXISTS orbs INTEGER NOT NULL DEFAULT 0 CHECK (orbs >= 0);
+ALTER TABLE users ALTER COLUMN orbs TYPE BIGINT USING orbs::bigint;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS play_seconds BIGINT NOT NULL DEFAULT 0 CHECK (play_seconds >= 0);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_orb_claim DATE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS starcode TEXT UNIQUE;
@@ -66,9 +67,100 @@ CREATE TABLE IF NOT EXISTS places (
 );
 
 ALTER TABLE places ADD COLUMN IF NOT EXISTS requires_supervision BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE places ADD COLUMN IF NOT EXISTS privacy TEXT NOT NULL DEFAULT 'private' CHECK (privacy IN ('public','private','friends'));
+UPDATE places SET privacy=CASE WHEN published THEN 'public' ELSE 'private' END WHERE published=true AND privacy='private';
 
 CREATE INDEX IF NOT EXISTS places_owner_id_idx ON places(owner_id);
 CREATE INDEX IF NOT EXISTS places_published_idx ON places(published, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS place_activity (
+  id UUID PRIMARY KEY,
+  place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+  actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS place_activity_recent_idx ON place_activity(place_id,created_at DESC);
+
+CREATE TABLE IF NOT EXISTS gamepasses (
+  id UUID PRIMARY KEY,
+  place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+  owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  icon_asset_id UUID,
+  price_orbs INTEGER NOT NULL CHECK (price_orbs>=0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  active BOOLEAN NOT NULL DEFAULT TRUE
+);
+CREATE INDEX IF NOT EXISTS gamepasses_place_idx ON gamepasses(place_id,active,created_at DESC);
+
+CREATE TABLE IF NOT EXISTS gamepass_ownership (
+  gamepass_id UUID NOT NULL REFERENCES gamepasses(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  purchased_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  price_orbs INTEGER NOT NULL,
+  PRIMARY KEY(gamepass_id,user_id)
+);
+
+-- Keep the Orb debit and entitlement grant atomic. Locking the buyer first
+-- serializes concurrent purchases from the same account.
+CREATE OR REPLACE FUNCTION rewind_purchase_gamepass(p_user_id UUID, p_gamepass_id UUID)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  pass_row gamepasses%ROWTYPE;
+  buyer_orbs BIGINT;
+BEGIN
+  SELECT * INTO pass_row
+  FROM gamepasses
+  WHERE id = p_gamepass_id AND active = TRUE;
+  IF NOT FOUND THEN RETURN 'unavailable'; END IF;
+
+  SELECT orbs INTO buyer_orbs FROM users WHERE id = p_user_id FOR UPDATE;
+  IF NOT FOUND THEN RETURN 'unavailable'; END IF;
+  IF EXISTS (SELECT 1 FROM gamepass_ownership WHERE gamepass_id = p_gamepass_id AND user_id = p_user_id) THEN
+    RETURN 'owned';
+  END IF;
+  IF buyer_orbs < pass_row.price_orbs THEN RETURN 'insufficient'; END IF;
+
+  UPDATE users SET orbs = orbs - pass_row.price_orbs WHERE id = p_user_id;
+  INSERT INTO gamepass_ownership(gamepass_id,user_id,price_orbs)
+  VALUES(p_gamepass_id,p_user_id,pass_row.price_orbs);
+  RETURN 'purchased';
+END;
+$$;
+
+CREATE TABLE IF NOT EXISTS experience_badges (
+  id UUID PRIMARY KEY,
+  place_id UUID NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+  owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  icon_asset_id UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  active BOOLEAN NOT NULL DEFAULT TRUE
+);
+CREATE INDEX IF NOT EXISTS experience_badges_place_idx ON experience_badges(place_id,active,created_at DESC);
+
+CREATE TABLE IF NOT EXISTS badge_awards (
+  badge_id UUID NOT NULL REFERENCES experience_badges(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  awarded_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  awarded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY(badge_id,user_id)
+);
+
+CREATE TABLE IF NOT EXISTS friendships (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  friend_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','accepted','rejected')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY(user_id,friend_id),
+  CHECK(user_id<>friend_id)
+);
 
 CREATE TABLE IF NOT EXISTS place_scripts (
   id UUID PRIMARY KEY,

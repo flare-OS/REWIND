@@ -6,7 +6,7 @@ export default async function handler(req,res) {
     if (req.method==='GET') {
       const [counts]=await sql()`SELECT (SELECT COUNT(*) FROM users) AS users,(SELECT COUNT(*) FROM places) AS places,(SELECT COUNT(*) FROM assets WHERE status='pending') AS pending_assets,(SELECT COUNT(*) FROM reports WHERE status='open') AS open_reports`;
       const assets=await sql()`SELECT a.id,a.asset_type,a.name,a.description,a.public_url,a.mime_type,a.byte_size,a.status,a.created_at,u.username AS owner_username FROM assets a JOIN users u ON u.id=a.owner_id ORDER BY CASE WHEN a.status='pending' THEN 0 ELSE 1 END,a.created_at DESC LIMIT 100`;
-      const users=user.role==='owner' ? await sql()`SELECT id,username,role,created_at FROM users ORDER BY created_at DESC LIMIT 100` : [];
+      const users=user.role==='owner' ? await sql()`SELECT id,username,role,plan,orbs,created_at FROM users ORDER BY created_at DESC LIMIT 100` : [];
       const reports=user.role==='owner'?await sql()`SELECT r.id,r.target_type,r.target_id,r.reason,r.details,r.status,r.created_at,u.username AS reporter FROM reports r JOIN users u ON u.id=r.reporter_id WHERE r.status IN ('open','reviewing') ORDER BY r.created_at DESC LIMIT 100`:[];
       return json(res,200,{counts,assets,users,reports,viewer:{username:user.username,role:user.role}});
     }
@@ -34,6 +34,15 @@ export default async function handler(req,res) {
         if(!['reviewing','resolved','dismissed'].includes(data.status))return fail(res,400,'Invalid report status.');
         const [report]=await sql()`UPDATE reports SET status=${data.status},reviewed_by=${user.id},reviewed_at=NOW() WHERE id=${id} RETURNING id,status`;
         return report?json(res,200,{report}):fail(res,404,'Report not found.');
+      }
+      if(action==='grant_orbs'){
+        if(user.role!=='owner')return fail(res,403,'Only the Owner can grant Orbs.');
+        const targetId=String(data.userId||''),amount=Math.floor(Number(data.amount));if(!/^[0-9a-f-]{36}$/i.test(targetId)||!Number.isSafeInteger(amount)||amount<0||amount>1000000000000)return fail(res,400,'Enter a valid user ID and Orb amount from 0 to 1,000,000,000,000.');
+        const [target]=await sql()`UPDATE users SET orbs=orbs+${amount} WHERE id=${targetId} RETURNING id,username,orbs`;return target?json(res,200,{user:target}):fail(res,404,'User not found.');
+      }
+      if(action==='set_user_plan'){
+        if(user.role!=='owner')return fail(res,403,'Only the Owner can change account plans.');const targetId=String(data.userId||''),plan=String(data.plan||'');if(!/^[0-9a-f-]{36}$/i.test(targetId)||!['free','neptune','pluto','supernova'].includes(plan))return fail(res,400,'Choose a valid user and plan.');
+        const [target]=await sql()`UPDATE users SET plan=${plan},starcode=CASE WHEN ${plan} IN ('pluto','supernova') AND starcode IS NULL THEN UPPER(SUBSTRING(REPLACE(gen_random_uuid()::text,'-',''),1,8)) ELSE starcode END WHERE id=${targetId} RETURNING id,username,plan,starcode`;return target?json(res,200,{user:target}):fail(res,404,'User not found.');
       }
       return fail(res,400,'Unknown admin action.');
     }
