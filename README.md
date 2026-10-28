@@ -1,6 +1,6 @@
 # REWIND
 
-REWIND is a browser based creator platform prototype. The frontend is a static GitHub Pages site, and the serverless Node API lives in `api/` for deployment separately (Vercel is configured in `vercel.json`).
+REWIND is a browser based creator platform prototype. The frontend is a static GitHub Pages site; the Node API can run as a Render web service using `server.js` and the deployment template in `render.yaml`.
 
 For the click-by-click custom domain walkthrough, open [`api-domain-guide.html`](api-domain-guide.html).
 
@@ -32,11 +32,11 @@ Keep the repository's existing Pages source and custom domain (`rwd.2bd.net`). C
 
 ## Deploy the API
 
-GitHub Pages serves HTML/CSS/JavaScript and cannot execute Node routes or protect environment variables. Deploy this same repository (or a connected copy) as a Vercel project with the project root set to this directory. Vercel will expose the handlers in `api/` as `/api/...` routes. Set the API project's environment variables in its dashboard; copy the needed values from your private `.env` locally, but do not upload `.env`.
+GitHub Pages serves HTML/CSS/JavaScript and cannot execute Node routes or protect environment variables. Deploy this repository as a Render Web Service using the root `render.yaml` Blueprint. The service runs `npm ci` and `npm start`, and serves the API at `/api/...`. Add the environment variables in Render's dashboard; copy needed values from your private `.env`, but never upload `.env`.
 
-Set these Vercel variables: `DATABASE_URL`, `OWNER_USERNAME`, `OWNER_BOOTSTRAP_TOKEN`, `CORS_ORIGINS`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_PUBLIC_BASE_URL`. Include `https://rwd.2bd.net` and `https://flare-os.github.io` in `CORS_ORIGINS`. `COOKIE_DOMAIN` can stay blank because the session cookie belongs to the API hostname. `API_PUBLIC_URL` documents the public API origin; the frontend defaults to `https://api.rwd.2bd.net` for deployed use.
+Render needs `DATABASE_URL`, `OWNER_USERNAME`, `OWNER_BOOTSTRAP_TOKEN`, `CORS_ORIGINS`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY`. The Blueprint sets `NODE_ENV=production`, the site origins, and `API_PUBLIC_URL`. `S3_PUBLIC_BASE_URL` is optional if public previews are wanted. The free Render service sleeps after 15 minutes without requests and may take about a minute to wake.
 
-In Vercel, assign the API custom domain `api.rwd.2bd.net` and follow its DNS instructions at your DNS provider. Once the API domain is active, the existing frontend will call `https://api.rwd.2bd.net/api/...`. `https://api.rwd.2bd.net/api/health` reports API/database status.
+Follow [`api-domain-guide.html`](api-domain-guide.html) to assign `api.rwd.2bd.net` to Render and add the CNAME in FreeDomain.one. This requires the ability to edit DNS inside the `RWD.2BD.NET` zone; no changes are needed to the website's existing root DNS records. When the API is ready, `https://api.rwd.2bd.net/api/health` reports API/database status.
 
 Signed uploads require the bucket's CORS policy to allow `PUT` from `https://rwd.2bd.net` and `https://flare-os.github.io`, and to allow the `Content-Type` request header. `S3_PUBLIC_BASE_URL` should be the public base for objects if public previews are desired.
 

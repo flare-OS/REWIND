@@ -1,3 +1,4 @@
+import './config.js';
 const config = window.REWIND_CONFIG || {};
 const apiBase = (config.apiBase || (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? '' : 'https://api.rwd.2bd.net')).replace(/\/$/, '');
 async function api(path, options = {}) {

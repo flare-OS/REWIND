@@ -55,4 +55,5 @@ const server=createServer(async(req,res)=>{
     res.end(req.method==='HEAD'?undefined:body);
   } catch { res.writeHead(404,{'Content-Type':'text/plain; charset=utf-8'}).end('Not found'); }
 });
-server.listen(port,'127.0.0.1',()=>console.log(`REWIND preview: http://localhost:${port}`));
+const host=process.env.HOST||(process.env.PORT?'0.0.0.0':'127.0.0.1');
+server.listen(port,host,()=>console.log(`REWIND server listening on ${host}:${port}`));
