@@ -17,12 +17,30 @@ function setAuthMode(mode) {
   document.querySelector('#auth-submit').textContent = signup ? 'Create account' : 'Log in';
   document.querySelector('#username-field').classList.remove('hidden');
   document.querySelector('#email-field').classList.toggle('hidden', !signup);
+  document.querySelector('#birth-field').classList.toggle('hidden', !signup);
+  document.querySelector('#age-note').classList.toggle('hidden', !signup);
+  document.querySelector('#age-confirm-field').classList.toggle('hidden', !signup);
+  document.querySelector('#terms-accept-field').classList.toggle('hidden', !signup);
+  document.querySelector('[name=email]').required = false;
+  document.querySelector('[name=dateOfBirth]').required = signup;
+  document.querySelector('[name=confirmAge]').required = signup;document.querySelector('[name=confirmAge]').checked = false;
+  document.querySelector('[name=acceptTerms]').required = signup;document.querySelector('[name=acceptTerms]').checked = false;
+  updateSupervisorField();
   document.querySelector('[name=username]').required = true;
   document.querySelector('#switch-copy').textContent = signup ? 'Already have an account?' : 'New to REWIND?';
   document.querySelector('#switch-auth').textContent = signup ? 'Log in' : 'Create an account';
   document.querySelector('#auth-message').textContent = '';
   document.querySelector('[name=password]').autocomplete = signup ? 'new-password' : 'current-password';
 }
+function updateSupervisorField() {
+  const field=document.querySelector('#supervisor-field'),input=document.querySelector('[name=supervisorUsername]'),dob=document.querySelector('[name=dateOfBirth]').value;
+  if(authMode!=='signup'){field.classList.add('hidden');input.required=false;return}
+  const date=dob?new Date(`${dob}T00:00:00`):null;
+  if(!date||Number.isNaN(date.getTime())){field.classList.add('hidden');input.required=false;return}
+  const now=new Date();let age=now.getFullYear()-date.getFullYear();if(now.getMonth()<date.getMonth()||(now.getMonth()===date.getMonth()&&now.getDate()<date.getDate()))age--;
+  field.classList.toggle('hidden',age>=15);input.required=age>=13&&age<15;
+}
+const birthInput=document.querySelector('[name=dateOfBirth]');const ageCutoff=new Date();ageCutoff.setFullYear(ageCutoff.getFullYear()-13);birthInput.max=ageCutoff.toISOString().slice(0,10);birthInput.addEventListener('input',updateSupervisorField);
 document.querySelectorAll('[data-open-auth]').forEach(button => button.addEventListener('click', () => { setAuthMode(button.dataset.openAuth); dialog.showModal(); }));
 document.querySelector('#switch-auth').addEventListener('click', () => setAuthMode(authMode === 'login' ? 'signup' : 'login'));
 document.querySelector('#auth-form').addEventListener('submit', async event => {
@@ -31,6 +49,7 @@ document.querySelector('#auth-form').addEventListener('submit', async event => {
   button.disabled = true; message.textContent = 'Connecting…';
   try {
     const body = Object.fromEntries(form.entries());
+    if(authMode==='signup'){body.confirmAge=form.has('confirmAge');body.acceptTerms=form.has('acceptTerms');body.ackPrivacy=form.has('acceptTerms')}
     await api(`auth/${authMode}`, { method: 'POST', body: JSON.stringify(body) });
     dialog.close(); await loadSession();
   } catch (error) { message.textContent = error.message; }
@@ -42,6 +61,7 @@ async function loadSession() {
     const chip = document.querySelector('#user-chip'); chip.textContent = `${user.username} · ${user.role}`; chip.classList.remove('hidden');
     document.querySelectorAll('[data-open-auth]').forEach(b => b.classList.add('hidden'));
     if (['owner','asset_mod'].includes(user.role) && !document.querySelector('#admin-link')) { const link=document.createElement('a');link.id='admin-link';link.href='admin/';link.className='button button-quiet';link.textContent='Admin';chip.before(link); }
+    try { const family=await api('guardian'); document.querySelector('#guardian-link').classList.toggle('hidden',!(family.age<15||family.requests?.length||family.link?.supervisor_user_id===family.viewerId)); } catch { document.querySelector('#guardian-link').classList.add('hidden'); }
     const logout = document.querySelector('#logout-button'); if (!logout) { const out=document.createElement('button');out.id='logout-button';out.className='button button-quiet';out.textContent='Log out';out.onclick=async()=>{try{await api('auth/logout',{method:'POST'});location.reload()}catch(e){alert(e.message)}};chip.after(out); }
     return user;
   } catch { return null; }

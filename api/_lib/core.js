@@ -49,6 +49,9 @@ export async function currentUser(req) {
 export async function requireUser(req, res, roles = null) {
   const user = await currentUser(req);
   if (!user) { fail(res, 401, 'Log in to continue.'); return null; }
+  const [ageCheck]=await sql()`SELECT date_of_birth IS NOT NULL AS has_birth_date, EXTRACT(YEAR FROM AGE(CURRENT_DATE,date_of_birth))::int AS age FROM users WHERE id=${user.id}`;
+  if (!ageCheck?.has_birth_date) { fail(res, 403, 'Add your date of birth in Family supervision before using account features.'); return null; }
+  if (ageCheck.age<13) { fail(res, 403, 'REWIND accounts require an age of at least 13.'); return null; }
   if (roles && !roles.includes(user.role)) { fail(res, 403, 'You do not have permission to do that.'); return null; }
   return user;
 }
