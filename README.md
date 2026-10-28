@@ -7,7 +7,7 @@ For the click-by-click custom domain walkthrough, open [`api-domain-guide.html`]
 ## Features in this build
 
 - Account signup/login with hashed passwords and 30 day HTTP-only sessions.
-- `lunastral` can claim the Owner role only with the private owner bootstrap token.
+- Public signup creates regular user accounts. Promote `lunastral` to Owner directly in Neon after account creation.
 - Create, save, and publish places with name, description, genre, scene data, and optional icon/thumbnail.
 - A combined `/editor/` scene, UI, Luau source, and animation workspace. It includes blocks, spheres, pyramids, a simple rig, move/scale controls, and Frame/TextLabel/ImageLabel/TextButton/ScreenGui insertion.
 - A 3D avatar editor that saves avatar appearance.
@@ -19,10 +19,10 @@ Luau is stored as place source only; this build does not execute Luau. The curre
 ## Local preview and API
 
 1. Create a Neon PostgreSQL database and run [`db/schema.sql`](db/schema.sql) in its SQL editor.
-2. Fill in `.env` locally. Keep it private. Set at least `DATABASE_URL`, `OWNER_USERNAME=lunastral`, and a long random `OWNER_BOOTSTRAP_TOKEN`. Configure `CORS_ORIGINS` for the local site and your public site origins.
+2. Fill in `.env` locally. Keep it private. Set `DATABASE_URL` and configure `CORS_ORIGINS` for the local site and your public site origins.
 3. Add credentials for an S3-compatible bucket (`S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_PUBLIC_BASE_URL`). Configure that bucket to allow browser `PUT` requests from the frontend origins and public reads if you want approved assets to display.
 4. Run `npm install`, then `npm start`. Open `http://localhost:8080`.
-5. Create the account `lunastral` with the same `OWNER_BOOTSTRAP_TOKEN` in the signup form. The bootstrap token is only for creating this first Owner account; never put it in frontend code or GitHub.
+5. Create and log in to the `lunastral` account. In Neon SQL Editor, run `UPDATE users SET role = 'owner' WHERE username_key = 'lunastral';` to grant the Owner role. This direct database step avoids putting an owner secret in the signup endpoint or frontend.
 
 The API needs the schema applied before signup/login will work. Local static files can open without Neon, but account features require database credentials.
 
@@ -34,7 +34,7 @@ Keep the repository's existing Pages source and custom domain (`rwd.2bd.net`). C
 
 GitHub Pages serves HTML/CSS/JavaScript and cannot execute Node routes or protect environment variables. Deploy this repository as a Render Web Service using the root `render.yaml` Blueprint. The service runs `npm ci` and `npm start`, and serves the API at `/api/...`. Add the environment variables in Render's dashboard; copy needed values from your private `.env`, but never upload `.env`.
 
-Render needs `DATABASE_URL`, `OWNER_USERNAME`, `OWNER_BOOTSTRAP_TOKEN`, `CORS_ORIGINS`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY`. The Blueprint sets `NODE_ENV=production`, the site origins, and `API_PUBLIC_URL`. `S3_PUBLIC_BASE_URL` is optional if public previews are wanted. The free Render service sleeps after 15 minutes without requests and may take about a minute to wake.
+Render needs `DATABASE_URL`, `CORS_ORIGINS`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY`. The Blueprint sets `NODE_ENV=production`, the site origins, and `API_PUBLIC_URL`. `S3_PUBLIC_BASE_URL` is optional if public previews are wanted. The free Render service sleeps after 15 minutes without requests and may take about a minute to wake.
 
 Follow [`api-domain-guide.html`](api-domain-guide.html) to assign `api.rwd.2bd.net` to Render and add the CNAME in FreeDomain.one. This requires the ability to edit DNS inside the `RWD.2BD.NET` zone; no changes are needed to the website's existing root DNS records. When the API is ready, `https://api.rwd.2bd.net/api/health` reports API/database status.
 

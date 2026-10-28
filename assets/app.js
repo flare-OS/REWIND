@@ -17,7 +17,6 @@ function setAuthMode(mode) {
   document.querySelector('#auth-submit').textContent = signup ? 'Create account' : 'Log in';
   document.querySelector('#username-field').classList.remove('hidden');
   document.querySelector('#email-field').classList.toggle('hidden', !signup);
-  document.querySelector('#bootstrap-field').classList.toggle('hidden', !signup);
   document.querySelector('[name=username]').required = true;
   document.querySelector('#switch-copy').textContent = signup ? 'Already have an account?' : 'New to REWIND?';
   document.querySelector('#switch-auth').textContent = signup ? 'Log in' : 'Create an account';

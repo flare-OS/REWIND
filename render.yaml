@@ -9,15 +9,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: OWNER_USERNAME
-        value: lunastral
       - key: CORS_ORIGINS
         value: https://rwd.2bd.net,https://flare-os.github.io
       - key: API_PUBLIC_URL
         value: https://api.rwd.2bd.net
       - key: DATABASE_URL
-        sync: false
-      - key: OWNER_BOOTSTRAP_TOKEN
         sync: false
       - key: S3_ENDPOINT
         sync: false
