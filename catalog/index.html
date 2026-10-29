@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>Creator Catalog · REWIND</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/rewind-mark.svg">
+  <link rel="stylesheet" href="../assets/app.css">
+  <link rel="stylesheet" href="../assets/portal.css">
+  <link rel="stylesheet" href="../assets/polish.css">
+  <link rel="stylesheet" href="../assets/home-refresh.css">
+</head>
+<body data-page="catalog">
+  <header class="topbar">
+    <a class="brand" href="../"><img class="brand-mark-img" src="../assets/rewind-mark.svg" alt=""><span>REWIND</span></a>
+    <nav aria-label="Main navigation">
+      <a href="../">Home</a>
+      <a href="../games/">Games</a>
+      <a class="active" href="./">Catalog</a>
+      <a href="../experiences/">Experiences</a>
+      <a href="../upload/">Upload</a>
+    </nav>
+    <div class="top-actions"><a class="button button-quiet" href="../">Account</a></div>
+  </header>
+  <main class="portal-shell">
+    <section class="catalog-section" aria-labelledby="catalog-title">
+      <header class="catalog-heading">
+        <div><span class="eyebrow">MADE BY THE COMMUNITY</span><h1 id="catalog-title">Creator Catalog</h1><p>Browse, preview and play assets published by REWIND creators.</p></div>
+        <a class="button button-primary" href="../upload/">Upload an asset</a>
+      </header>
+      <div class="catalog-toolbar">
+        <div class="catalog-tabs" role="group" aria-label="Filter catalog by type">
+          <button class="catalog-tab active" type="button" data-catalog-filter="all">All</button>
+          <button class="catalog-tab" type="button" data-catalog-filter="image">Images</button>
+          <button class="catalog-tab" type="button" data-catalog-filter="audio">Audio</button>
+          <button class="catalog-tab" type="button" data-catalog-filter="model">3D models</button>
+        </div>
+        <label class="catalog-search"><span aria-hidden="true">⌕</span><input id="catalog-search" type="search" placeholder="Search the catalog" aria-label="Search the catalog"></label>
+      </div>
+      <p id="catalog-count" class="catalog-count" aria-live="polite">Loading approved assets…</p>
+      <section id="catalog-grid" class="catalog-grid" aria-live="polite"><div class="empty-state catalog-empty">Loading catalog…</div></section>
+      <div class="catalog-more-wrap"><button id="catalog-load-more" class="button button-outline" type="button" hidden>Load more</button></div>
+    </section>
+  </main>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+  <script type="module" src="../assets/catalog.js"></script>
+</body>
+</html>
