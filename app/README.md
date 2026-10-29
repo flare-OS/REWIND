@@ -1,4 +1,4 @@
-﻿# REWIND Studio download
+# REWIND Studio download
 
 Place the finished Windows installer in this folder with the exact filename `studio.exe`.
 
