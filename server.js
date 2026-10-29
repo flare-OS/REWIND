@@ -23,6 +23,8 @@ async function localApi(req,res,pathname) {
   else if (pieces[1]==='places') modulePath='./api/places/index.js';
   else if (pieces[1]==='assets' && pieces[2]==='catalog') modulePath='./api/assets/catalog.js';
   else if (pieces[1]==='assets') modulePath='./api/assets/index.js';
+  else if (pieces[1]==='news' && pieces[2]==='share') modulePath='./api/news/share.js';
+  else if (pieces[1]==='news') modulePath='./api/news/index.js';
   else if (pieces[1]==='users' && pieces[2]) modulePath='./api/users/[id].js';
   else if (pieces[1]==='admin') modulePath='./api/admin/index.js';
   else if (pieces[1]==='avatar') modulePath='./api/avatar.js';

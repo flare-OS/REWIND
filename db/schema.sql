@@ -38,6 +38,18 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions(expires_at);
 
+CREATE TABLE IF NOT EXISTS news_posts (
+  id UUID PRIMARY KEY,
+  author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL CHECK (char_length(title) BETWEEN 1 AND 120),
+  summary TEXT NOT NULL DEFAULT '' CHECK (char_length(summary) <= 300),
+  content TEXT NOT NULL CHECK (char_length(content) BETWEEN 1 AND 20000),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  published_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS news_posts_published_idx ON news_posts(published_at DESC) WHERE published_at IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS supervision_links (
   id UUID PRIMARY KEY,
   child_user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>News · REWIND</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/rewind-mark.svg">
+  <link rel="stylesheet" href="../assets/app.css">
+  <link rel="stylesheet" href="../assets/portal.css">
+  <link rel="stylesheet" href="../assets/polish.css">
+  <link rel="stylesheet" href="../assets/home-refresh.css">
+</head>
+<body data-page="news">
+  <header class="topbar">
+    <a class="brand" href="../"><img class="brand-mark-img" src="../assets/rewind-mark.svg" alt=""><span>REWIND</span></a>
+    <button class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav id="primary-nav" aria-label="Main navigation">
+      <a href="../">Home</a><a href="../games/">Games</a><a href="../catalog/">Catalog</a><a class="active" href="./">News</a>
+      <a href="../experiences/">Experiences</a><a href="../upload/">Upload</a><a href="../">Account</a>
+    </nav>
+    <div class="top-actions"></div>
+  </header>
+  <main class="portal-shell news-shell">
+    <header class="portal-head"><div><span class="eyebrow">WHAT'S NEW</span><h1>REWIND News</h1><p>Updates and announcements from the REWIND team.</p></div></header>
+    <section id="news-list" class="news-list" aria-live="polite"><div class="empty-state news-empty">Loading news…</div></section>
+  </main>
+  <script type="module" src="../assets/news.js"></script>
+  <script type="module" src="../assets/mobile-nav.js"></script>
+</body>
+</html>

@@ -14,7 +14,7 @@ Legal pages are published at [`privacy.html`](privacy.html), [`terms-of-service.
 - A 3D avatar editor that saves avatar appearance.
 - Owner and Asset Mod admin panels for reviewing uploaded icons, thumbnails, audio, decals, and models. Owners can assign roles.
 - S3-compatible signed uploads. Neon is used for PostgreSQL data; it is not the file bucket.
-- Separate Games, Creator Catalog, Experiences, Plans, Upload, and Reports pages; Games searches public experiences by title, creator, and genre, while the Catalog provides searchable, paginated approved assets with image, audio, and interactive 3D previews.
+- Separate Games, Creator Catalog, News, Experiences, Plans, Upload, and Reports pages; News posts can be published by Owner and Asset Mod accounts, and each post has a share link with a generated REWIND Open Graph preview.
 - Public creator profiles are available at `/users/<user-id>` and show account-safe public details and published public experiences.
 - Experience privacy settings, friends-only access, a 12-day activity feed, Orb-priced gamepasses, and experience badges.
 - Owner controls to grant Orbs and change a user's plan.
@@ -23,7 +23,7 @@ The desktop application uses a Studio-like ribbon, 3D viewport, Toolbox, Explore
 
 ## Local preview and API
 
-1. Create a Neon PostgreSQL database and run [`db/schema.sql`](db/schema.sql) in its SQL editor. If upgrading an existing database, run the updated schema again to add all newer columns and tables for plans, privacy, friendships, activity, gamepasses, purchases, badges, and reports.
+1. Create a Neon PostgreSQL database and run [`db/schema.sql`](db/schema.sql) in its SQL editor. If upgrading an existing database, run the updated schema again to add all newer columns and tables for plans, privacy, friendships, activity, gamepasses, purchases, badges, reports, and News.
 2. Fill in `.env` locally. Keep it private. Set `DATABASE_URL` and configure `CORS_ORIGINS` for any additional exact site origins. The API already allows `https://rwd.2bd.net`, `https://www.rwd.2bd.net`, and `https://flare-os.github.io`.
 3. Configure an S3-compatible bucket (`S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY`). The API also accepts Neon's standard `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` names; `S3_BUCKET` is still required. For Neon Object Storage, use the endpoint and storage credential for the same branch as `DATABASE_URL`. The API creates short-lived read URLs for approved assets, so the bucket can remain private; `S3_PUBLIC_BASE_URL` is optional. Configure bucket CORS to allow browser `PUT` requests from the frontend origins, and `GET` requests if browser previews (especially 3D models) need cross-origin reads.
 4. Run `npm install`, then `npm start`. Open `http://localhost:8080`. Do not use a static-only Live Server for the API routes.
