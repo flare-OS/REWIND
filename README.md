@@ -15,6 +15,7 @@ Legal pages are published at [`privacy.html`](privacy.html), [`terms-of-service.
 - Owner and Asset Mod admin panels for reviewing uploaded icons, thumbnails, audio, decals, and models. Owners can assign roles.
 - S3-compatible signed uploads. Neon is used for PostgreSQL data; it is not the file bucket.
 - Separate Games, Creator Catalog, Experiences, Plans, Upload, and Reports pages; Games searches public experiences by title, creator, and genre, while the Catalog provides searchable, paginated approved assets with image, audio, and interactive 3D previews.
+- Public creator profiles are available at `/users/<user-id>` and show account-safe public details and published public experiences.
 - Experience privacy settings, friends-only access, a 12-day activity feed, Orb-priced gamepasses, and experience badges.
 - Owner controls to grant Orbs and change a user's plan.
 

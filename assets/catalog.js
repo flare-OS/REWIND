@@ -21,7 +21,7 @@ function assetCard(asset,index){
       ?`<div class="catalog-preview audio-preview"><span class="audio-glyph" aria-hidden="true">♫</span><audio controls preload="none" src="${escapeHtml(asset.public_url)}" aria-label="Play ${escapeHtml(asset.name)}"></audio></div>`
       :`<div class="catalog-preview model-preview"><model-viewer src="${escapeHtml(asset.public_url)}" alt="${escapeHtml(asset.name)}" camera-controls auto-rotate rotation-per-second="20deg" loading="lazy"></model-viewer><a class="model-fallback" href="${escapeHtml(asset.public_url)}" target="_blank" rel="noopener">Open model ↗</a></div>`;
   const size=formatSize(asset.byte_size);
-  return`<article class="catalog-card" style="--card-order:${index}">${preview}<div class="catalog-card-info"><div class="catalog-card-title"><b>${escapeHtml(asset.name)}</b><span>${escapeHtml(typeNames[kind]||kind)}</span></div>${asset.description?`<p class="catalog-description">${escapeHtml(asset.description)}</p>`:''}<div class="catalog-card-meta"><span>by ${escapeHtml(asset.owner_username||'REWIND creator')}</span>${size?`<span>${size}</span>`:''}</div></div></article>`;
+  return`<article class="catalog-card" style="--card-order:${index}">${preview}<div class="catalog-card-info"><div class="catalog-card-title"><b>${escapeHtml(asset.name)}</b><span>${escapeHtml(typeNames[kind]||kind)}</span></div>${asset.description?`<p class="catalog-description">${escapeHtml(asset.description)}</p>`:''}<div class="catalog-card-meta"><span>by ${asset.owner_id?`<a href="/users/${encodeURIComponent(asset.owner_id)}">${escapeHtml(asset.owner_username||'creator')}</a>`:escapeHtml(asset.owner_username||'REWIND creator')}</span>${size?`<span>${size}</span>`:''}</div></div></article>`;
 }
 
 function render(){

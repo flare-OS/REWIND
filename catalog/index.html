@@ -14,14 +14,16 @@
 <body data-page="catalog">
   <header class="topbar">
     <a class="brand" href="../"><img class="brand-mark-img" src="../assets/rewind-mark.svg" alt=""><span>REWIND</span></a>
-    <nav aria-label="Main navigation">
+    <button class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav id="primary-nav" aria-label="Main navigation">
       <a href="../">Home</a>
       <a href="../games/">Games</a>
       <a class="active" href="./">Catalog</a>
       <a href="../experiences/">Experiences</a>
       <a href="../upload/">Upload</a>
+      <a href="../">Account</a>
     </nav>
-    <div class="top-actions"><a class="button button-quiet" href="../">Account</a></div>
+    <div class="top-actions"></div>
   </header>
   <main class="portal-shell">
     <section class="catalog-section" aria-labelledby="catalog-title">
@@ -45,5 +47,6 @@
   </main>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   <script type="module" src="../assets/catalog.js"></script>
+  <script type="module" src="../assets/mobile-nav.js"></script>
 </body>
 </html>

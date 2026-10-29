@@ -22,6 +22,7 @@ async function localApi(req,res,pathname) {
   if (pieces[1]==='auth' && pieces[2]) { modulePath='./api/auth/[action].js'; req.query={action:pieces[2]}; }
   else if (pieces[1]==='places') modulePath='./api/places/index.js';
   else if (pieces[1]==='assets') modulePath='./api/assets/index.js';
+  else if (pieces[1]==='users' && pieces[2]) modulePath='./api/users/[id].js';
   else if (pieces[1]==='admin') modulePath='./api/admin/index.js';
   else if (pieces[1]==='avatar') modulePath='./api/avatar.js';
   else if (pieces[1]==='guardian') modulePath='./api/guardian.js';
@@ -49,6 +50,7 @@ const server=createServer(async(req,res)=>{
     catch(error) { console.error(error); if (!res.headersSent) res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:error.message})); }
     return;
   }
+  if (/^\/users\/[0-9a-f-]{36}\/?$/i.test(pathname)) pathname='/users/index.html';
   if (!['GET','HEAD'].includes(req.method||'')) { res.writeHead(405,{Allow:'GET, HEAD'}).end('Method not allowed'); return; }
   const relativePath=pathname==='/'?'index.html':pathname.slice(1);
   let filePath=path.resolve(root,relativePath), relativeToRoot=path.relative(root,filePath);

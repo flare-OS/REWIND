@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>Creator profile · REWIND</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/rewind-mark.svg">
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+  <link rel="stylesheet" href="/assets/polish.css">
+  <link rel="stylesheet" href="/assets/home-refresh.css">
+</head>
+<body data-page="profile">
+  <header class="topbar">
+    <a class="brand" href="/"><img class="brand-mark-img" src="/assets/rewind-mark.svg" alt=""><span>REWIND</span></a>
+    <button class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav id="primary-nav" aria-label="Main navigation">
+      <a href="/">Home</a>
+      <a href="/games/">Games</a>
+      <a href="/catalog/">Catalog</a>
+      <a href="/experiences/">Experiences</a>
+      <a href="/upload/">Upload</a>
+      <a href="/">Account</a>
+    </nav>
+    <div class="top-actions"><a class="button button-quiet" href="/">Account</a></div>
+  </header>
+  <main class="profile-shell">
+    <div id="profile-status" class="empty-state">This page could not be found.</div>
+    <section id="profile-content" class="profile-content" hidden>
+      <header class="profile-header">
+        <div class="profile-avatar" id="profile-avatar" aria-hidden="true"><span></span></div>
+        <div class="profile-identity"><span class="eyebrow">REWIND CREATOR</span><h1 id="profile-name"></h1><p id="profile-meta"></p></div>
+        <button id="copy-profile" class="button button-outline" type="button">Copy profile link</button>
+      </header>
+      <section class="profile-section">
+        <div class="profile-section-heading"><div><span class="eyebrow">PUBLIC EXPERIENCES</span><h2>Places by this creator</h2></div><a class="button button-quiet" href="/games/">Explore games</a></div>
+        <div class="world-grid" id="profile-places"><div class="empty-state">Loading experiences…</div></div>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="/assets/profile.js"></script>
+  <script type="module" src="/assets/mobile-nav.js"></script>
+  <script>
+    if(/^\/users\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/?$/i.test(location.pathname)){
+      document.querySelector('#profile-status').textContent='Loading creator profile…';
+    }
+  </script>
+</body>
+</html>
