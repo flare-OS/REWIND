@@ -38,9 +38,13 @@ async function load(append=false){
   const version=requestVersion,grid=$('#catalog-grid'),count=$('#catalog-count'),more=$('#catalog-load-more');
   if(!append)grid.innerHTML='<div class="empty-state catalog-empty">Loading catalog…</div>';
   more.disabled=true;
-  const query=new URLSearchParams({catalog:'true',offset:String(append?offset:0),type,search});
+  const query=new URLSearchParams();
+  if(type!=='all')query.set('type',type);
+  if(search)query.set('search',search);
+  if(append&&offset>0)query.set('offset',String(offset));
   try{
-    const response=await fetch(`${apiBase}/api/assets?${query}`,{credentials:'include'});
+    const queryString=query.toString();
+    const response=await fetch(`${apiBase}/api/assets/catalog${queryString?`?${queryString}`:''}`,{credentials:'include'});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw Error(data.error||`Request failed (${response.status})`);
     if(version!==requestVersion)return;

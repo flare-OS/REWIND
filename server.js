@@ -21,6 +21,7 @@ async function localApi(req,res,pathname) {
   let modulePath;
   if (pieces[1]==='auth' && pieces[2]) { modulePath='./api/auth/[action].js'; req.query={action:pieces[2]}; }
   else if (pieces[1]==='places') modulePath='./api/places/index.js';
+  else if (pieces[1]==='assets' && pieces[2]==='catalog') modulePath='./api/assets/catalog.js';
   else if (pieces[1]==='assets') modulePath='./api/assets/index.js';
   else if (pieces[1]==='users' && pieces[2]) modulePath='./api/users/[id].js';
   else if (pieces[1]==='admin') modulePath='./api/admin/index.js';
