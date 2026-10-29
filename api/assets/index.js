@@ -16,8 +16,8 @@ export default async function handler(req,res) {
   if (applyCors(req,res)) return;
   try {
     if (req.method==='GET') {
-      const {pathname}=new URL(req.url,'http://local');
-      if (pathname.endsWith('/catalog') || new URL(req.url,'http://local').searchParams.get('catalog')==='true') return catalogHandler(req,res);
+      const params=new URL(req.url,'http://local').searchParams;
+      if (params.has('type') || params.get('catalog')==='true') return catalogHandler(req,res);
       const user=await requireUser(req,res); if (!user) return;
       const assets=await sql()`SELECT id,asset_type,name,description,public_url,mime_type,byte_size,status,created_at FROM assets WHERE owner_id=${user.id} ORDER BY created_at DESC LIMIT 100`;
       return json(res,200,{assets});
