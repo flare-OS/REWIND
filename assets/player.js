@@ -1,15 +1,21 @@
 import './config.js';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { Sky } from 'three/addons/objects/Sky.js';
 
 const apiBase=(window.REWIND_CONFIG?.apiBase||(location.hostname==='localhost'||location.hostname==='127.0.0.1'?'':'https://api.rwd.2bd.net')).replace(/\/$/,'');
 const $=selector=>document.querySelector(selector);
 const canvas=$('#player-canvas'),stage=$('.player-stage'),message=$('#player-message');
 const params=new URLSearchParams(location.search),placeId=params.get('id');
-const held=new Set(),loader=new GLTFLoader(),obstacles=[];
-let renderer,scene,camera,player,place,frame=0,jumpVelocity=0,lastFrameTime=performance.now();
+const held=new Set(),loader=new GLTFLoader(),colliders=[],colliderBounds=[];
 const moveKeys={forward:['w','z'],back:['s'],left:['q','a'],right:['d']};
 const controls=new Set(['forward','back','left','right','jump']);
+const PLAYER_RADIUS=.4,PLAYER_HEIGHT=2.7;
+let renderer,scene,camera,composer,bloomPass,sky,player,place,frame=0,jumpVelocity=0,lastFrameTime=performance.now(),grounded=false,gravity=18,spawnPoint=new THREE.Vector3(0,2,6);
 
 function showError(text){
   message.textContent=text;
@@ -21,12 +27,15 @@ function setControl(control,down){
     else held.delete(control);
   }
 }
+function jump(){
+  if(grounded){jumpVelocity=7.4;grounded=false}
+}
 function onKeyDown(event){
   const key=event.key.toLowerCase();
   const control=Object.entries(moveKeys).find(([,keys])=>keys.includes(key))?.[0]||(key===' '||key==='spacebar'?'jump':null);
-  if(!control||/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||''))return;
+  if(!control||/INPUT|TEXTAREA|SELECT|BUTTON/.test(document.activeElement?.tagName||''))return;
   event.preventDefault();
-  if(control==='jump'&&!held.has('jump')&&player.position.y<=0.001)jumpVelocity=8;
+  if(control==='jump'&&!held.has('jump'))jump();
   setControl(control,true);
 }
 function onKeyUp(event){
@@ -45,123 +54,323 @@ function addAvatar(){
     const limb=new THREE.Mesh(new THREE.BoxGeometry(width,height,.5),material);limb.position.set(x,y,0);root.add(limb);limbs.push(limb);
   }
   root.userData.limbs=limbs;
-  root.position.set(0,0,6);root.rotation.y=Math.PI;
+  root.position.copy(spawnPoint);
+  root.rotation.y=Math.PI;
   scene.add(root);
   return root;
 }
-function addFloor(){
-  scene.add(new THREE.HemisphereLight(0xb8c4ff,0x34313a,2.1));
-  const light=new THREE.DirectionalLight(0xffe7ce,2.4);light.position.set(-8,16,9);scene.add(light);
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:0x171921,roughness:.94}));floor.rotation.x=-Math.PI/2;floor.position.y=-.08;floor.receiveShadow=true;scene.add(floor);
-  const grid=new THREE.GridHelper(80,80,0x514b6c,0x292b37);grid.position.y=-.03;scene.add(grid);
+function addLighting(){
+  scene.add(new THREE.HemisphereLight(0xc9d2f3,0x35313e,1.6));
+  const light=new THREE.DirectionalLight(0xffe7ce,2.3);
+  light.position.set(-8,16,9);light.castShadow=true;light.shadow.mapSize.set(1024,1024);light.shadow.camera.near=.5;light.shadow.camera.far=220;
+  scene.add(light);
 }
-function addPart(item){
-  let geometry,color=Number(item.color)||0x8980d8;
-  if(item.kind==='sphere')geometry=new THREE.SphereGeometry(1.5,32,20);
-  else if(item.kind==='pyramid')geometry=new THREE.ConeGeometry(2,3.5,4);
-  else geometry=new THREE.BoxGeometry(3,2.5,3);
-  const mesh=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color,roughness:.6,metalness:.03}));
-  mesh.name=item.name||item.kind||'Object';
-  if(Array.isArray(item.position))mesh.position.fromArray(item.position);
-  if(Array.isArray(item.rotation))mesh.rotation.fromArray(item.rotation);
-  if(Array.isArray(item.scale))mesh.scale.fromArray(item.scale);
-  mesh.castShadow=true;mesh.receiveShadow=true;
+function colorValue(value,fallback='#8980d8'){
+  if(typeof value==='number'&&Number.isFinite(value))return value;
+  if(typeof value==='string'&&/^#[0-9a-f]{3}$/i.test(value))return `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
+  if(typeof value==='string'&&/^#[0-9a-f]{6,8}$/i.test(value))return value.slice(0,7);
+  return fallback;
+}
+function createWedgeGeometry(){
+  const shape=new THREE.Shape();
+  shape.moveTo(-.5,-.5);shape.lineTo(.5,-.5);shape.lineTo(-.5,.5);shape.closePath();
+  const geometry=new THREE.ExtrudeGeometry(shape,{depth:1,bevelEnabled:false});
+  geometry.translate(0,0,-.5);geometry.computeVertexNormals();
+  return geometry;
+}
+function geometryFor(kind,legacy=false){
+  if(legacy){
+    if(kind==='sphere')return new THREE.SphereGeometry(1.5,32,20);
+    if(kind==='pyramid')return new THREE.ConeGeometry(2,3.5,4);
+    return new THREE.BoxGeometry(3,2.5,3);
+  }
+  switch(kind){
+    case 'sphere':return new THREE.SphereGeometry(.5,32,20);
+    case 'cylinder':return new THREE.CylinderGeometry(.5,.5,1,28);
+    case 'wedge':return createWedgeGeometry();
+    case 'torus':return new THREE.TorusGeometry(.36,.14,16,36);
+    case 'plane':return new THREE.BoxGeometry(1,.08,1);
+    case 'spawn':return new THREE.CylinderGeometry(.5,.5,.16,32);
+    case 'pyramid':return new THREE.ConeGeometry(.5,1,4);
+    default:return new THREE.BoxGeometry(1,1,1);
+  }
+}
+function materialFor(item){
+  const color=new THREE.Color(colorValue(item.color));
+  const settings={
+    SmoothPlastic:{roughness:.62,metalness:.03},
+    Metal:{roughness:.28,metalness:.92},
+    Wood:{roughness:.86,metalness:0},
+    Concrete:{roughness:.95,metalness:0},
+    Glass:{roughness:.08,metalness:.1,transparent:true,opacity:.35},
+    Neon:{roughness:.5,metalness:0,emissive:true}
+  }[item.material]||{roughness:.62,metalness:.03};
+  const transparency=THREE.MathUtils.clamp(Number(item.transparency)||0,0,1);
+  const material=new THREE.MeshStandardMaterial({
+    color,roughness:settings.roughness,metalness:settings.metalness,
+    transparent:Boolean(settings.transparent)||transparency>0,
+    opacity:settings.transparent?Math.min(settings.opacity,1-transparency):1-transparency,
+    side:THREE.DoubleSide
+  });
+  if(settings.emissive){material.emissive.copy(color);material.emissiveIntensity=1.35}
+  return material;
+}
+function applyTransform(object,item,legacy=false){
+  if(Array.isArray(item.position))object.position.fromArray(item.position);
+  if(Array.isArray(item.rotation))object.rotation.fromArray(item.rotation);
+  const size=legacy?(Array.isArray(item.scale)?item.scale:[1,1,1]):(Array.isArray(item.size)?item.size:[1,1,1]);
+  object.scale.fromArray(size.map(value=>Number.isFinite(Number(value))?Number(value):1));
+}
+function registerCollider(mesh,item){
+  if(!mesh.isMesh||item.anchored===false||item.visible===false||['light','bean','spawn'].includes(item.kind))return;
+  mesh.updateMatrixWorld(true);
+  if(!mesh.geometry.boundingBox)mesh.geometry.computeBoundingBox();
+  colliders.push(mesh);
+  colliderBounds.push(new THREE.Box3().setFromObject(mesh));
+}
+function addLight(item,legacy){
+  const mesh=new THREE.Mesh(geometryFor(item.kind,legacy),materialFor(item));
+  mesh.name=item.name||'Light';mesh.visible=item.visible!==false;
+  applyTransform(mesh,item,legacy);
+  const point=new THREE.PointLight(colorValue(item.color,'#ffe3a1'),14,16,1.8);
+  point.position.set(0,.35,0);mesh.add(point);
+  if(mesh.material instanceof THREE.MeshStandardMaterial){mesh.material.emissive=new THREE.Color(colorValue(item.color,'#ffe3a1'));mesh.material.emissiveIntensity=2}
   scene.add(mesh);
-  trackObstacle(mesh);
 }
-function trackObstacle(object){
-  object.updateMatrixWorld(true);
-  const bounds=new THREE.Box3().setFromObject(object);
-  if(bounds.max.y>.15&&bounds.min.y<5)obstacles.push(bounds);
+function addBean(item,legacy){
+  const root=new THREE.Group(),color=colorValue(item.color,'#efb75d');
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.34,.46,8,18),new THREE.MeshStandardMaterial({color,roughness:.72}));
+  body.position.y=.05;body.castShadow=true;root.add(body);
+  const face=new THREE.Mesh(new THREE.SphereGeometry(.22,20,14),new THREE.MeshStandardMaterial({color:'#f4d7b3',roughness:.8}));
+  face.position.set(0,.72,0);root.add(face);
+  const eyes=new THREE.MeshBasicMaterial({color:'#292127'});
+  for(const x of [-.08,.08]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.024,8,8),eyes);eye.position.set(x,.76,.2);root.add(eye)}
+  root.name=item.name||'Bean';root.visible=item.visible!==false;applyTransform(root,item,legacy);scene.add(root);
 }
-function addRig(item){
-  const root=new THREE.Group(),skin=new THREE.MeshStandardMaterial({color:0x8e7ae3}),dark=new THREE.MeshStandardMaterial({color:0x39364e});
-  const torso=new THREE.Mesh(new THREE.BoxGeometry(1.25,1.5,.65),skin);torso.position.y=2.1;root.add(torso);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.51,20,16),new THREE.MeshStandardMaterial({color:0xf0c6aa}));head.position.y=3.25;root.add(head);
-  for(const [name,x,y,material] of [['LeftArm',-.88,2.35,skin],['RightArm',.88,2.35,skin],['LeftLeg',-.35,1,dark],['RightLeg',.35,1,dark]]){
-    const part=new THREE.Mesh(new THREE.BoxGeometry(name.includes('Arm')?.46:.53,name.includes('Arm')?1.15:1.2,.55),material);part.position.set(x,y-.47,0);root.add(part);
+function addPart(item,legacy=false){
+  if(item.visible===false)return;
+  if(item.kind==='bean'){addBean(item,legacy);return}
+  if(item.kind==='light'){addLight(item,legacy);return}
+  const mesh=new THREE.Mesh(geometryFor(item.kind,legacy),materialFor(item));
+  mesh.name=item.name||item.kind||'Object';mesh.visible=true;
+  mesh.castShadow=item.castShadow!==false&&item.kind!=='spawn';mesh.receiveShadow=item.kind!=='light';
+  applyTransform(mesh,item,legacy);
+  if(item.kind==='pyramid'&&!legacy)mesh.rotation.y+=Math.PI/4;
+  if(item.kind==='spawn')mesh.position.y=Math.max(.08,mesh.position.y);
+  scene.add(mesh);
+  registerCollider(mesh,item);
+}
+function safeAssetUrl(value){
+  try{const url=new URL(value,location.href);return url.protocol==='https:'?url.href:null}catch{return null}
+}
+async function getAsset(assetId){
+  if(!assetId)return null;
+  const response=await fetch(`${apiBase}/api/assets?id=${encodeURIComponent(assetId)}`,{credentials:'include'});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||`Could not load approved asset (${response.status}).`);
+  return data.asset||null;
+}
+async function loadModel(item,legacy=false){
+  let url=item.assetUrl;
+  const assetId=item.assetId||item.imageAssetId||item.catalogAsset?.id;
+  if(assetId){
+    const asset=await getAsset(assetId);
+    url=asset?.public_url||url;
   }
-  root.name=item.name||'AvatarRig';
-  if(Array.isArray(item.position))root.position.fromArray(item.position);
-  if(Array.isArray(item.rotation))root.rotation.fromArray(item.rotation);
-  if(Array.isArray(item.scale))root.scale.fromArray(item.scale);
-  scene.add(root);trackObstacle(root);
-}
-function safeModelUrl(value){
-  try{const url=new URL(value);return url.protocol==='https:'?url.href:null}catch{return null}
-}
-async function addCatalogItem(item){
-  if(!item.catalogAsset)return addPart(item);
-  const assetId=item.catalogAsset.id;
-  if(!assetId)throw new Error(`“${item.name||'An asset'}” has no published catalog asset reference.`);
-  const assetResponse=await fetch(`${apiBase}/api/assets?id=${encodeURIComponent(assetId)}`,{credentials:'include'});
-  const assetData=await assetResponse.json().catch(()=>({}));
-  if(!assetResponse.ok)throw new Error(assetData.error||`Could not load asset (${assetResponse.status}).`);
-  const asset=assetData.asset;
-  if(!asset)return addPart(item);
-  if(asset.asset_type==='model'){
-    const url=safeModelUrl(asset.public_url);
-    if(!url)throw new Error(`The model “${asset.name||item.name}” has no secure preview URL.`);
-    const loaded=await loader.loadAsync(url),model=loaded.scene;
-    model.name=item.name||asset.name||'Model';
-    model.traverse(child=>{if(child.isMesh){child.castShadow=true;child.receiveShadow=true}});
-    if(Array.isArray(item.position))model.position.fromArray(item.position);
-    if(Array.isArray(item.rotation))model.rotation.fromArray(item.rotation);
-    if(Array.isArray(item.scale))model.scale.fromArray(item.scale);
-    scene.add(model);trackObstacle(model);return;
+  url=safeAssetUrl(url);
+  if(!url)throw new Error(`The model “${item.name||'Model'}” has no secure preview URL.`);
+  const gltf=await loader.loadAsync(url),model=gltf.scene;
+  model.name=item.name||'Model';
+  model.traverse(child=>{if(child.isMesh){child.castShadow=item.castShadow!==false;child.receiveShadow=true}});
+  applyTransform(model,item,legacy);model.visible=item.visible!==false;scene.add(model);
+  if(item.anchored!==false&&item.visible!==false){
+    model.updateMatrixWorld(true);
+    model.traverse(child=>registerCollider(child,item));
   }
-  if(asset.asset_type==='decal'){
-    const url=safeModelUrl(asset.public_url);
-    if(!url)throw new Error(`The decal “${asset.name||item.name}” has no secure preview URL.`);
-    const material=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});
-    const decal=new THREE.Mesh(new THREE.PlaneGeometry(3,3),material);decal.name=item.name||asset.name||'Decal';
-    if(Array.isArray(item.position))decal.position.fromArray(item.position);
-    if(Array.isArray(item.rotation))decal.rotation.fromArray(item.rotation);
-    if(Array.isArray(item.scale))decal.scale.fromArray(item.scale);
-    scene.add(decal);
-    new THREE.TextureLoader().load(url,texture=>{material.map=texture;material.needsUpdate=true},undefined,()=>showError(`Could not load decal: ${asset.name||item.name}`));
-    return;
+}
+async function addCatalogItem(item,legacy=false){
+  if(item.kind==='model'){await loadModel(item,legacy);return}
+  if(item.catalogAsset?.id){
+    const asset=await getAsset(item.catalogAsset.id);
+    if(asset?.asset_type==='model'){await loadModel({...item,assetId:asset.id},legacy);return}
+    if(asset?.asset_type==='decal'){
+      const url=safeAssetUrl(asset.public_url);
+      if(!url)throw new Error(`The decal “${asset.name||item.name}” has no secure preview URL.`);
+      const material=new THREE.MeshBasicMaterial({side:THREE.DoubleSide,transparent:true});
+      const decal=new THREE.Mesh(new THREE.PlaneGeometry(1,1),material);
+      decal.name=item.name||asset.name||'Decal';applyTransform(decal,item,legacy);scene.add(decal);
+      new THREE.TextureLoader().load(url,texture=>{texture.colorSpace=THREE.SRGBColorSpace;material.map=texture;material.needsUpdate=true},undefined,()=>showError(`Could not load decal: ${asset.name||item.name}`));
+      return;
+    }
   }
-  addPart({...item,kind:'sphere',color:0xe4bd65});
+  addPart(item,legacy);
+}
+function applyEnvironment(environment={}){
+  const preset=environment.preset||'studio';
+  const colors={studio:0x9fb7d6,sunset:0x7d5365,night:0x11131a,nebula:0x302b50,void:0x080910};
+  const bg=new THREE.Color(colors[preset]??colors.studio);
+  scene.background=null;
+  const fogFar=Math.max(20,Number(environment.fogFar)||140);
+  scene.fog=environment.fog===false?null:new THREE.Fog(bg,Math.max(8,fogFar*.22),fogFar);
+  const ambient=scene.children.find(child=>child.isHemisphereLight);
+  const sun=scene.children.find(child=>child.isDirectionalLight);
+  if(ambient)ambient.intensity=Number(environment.ambientIntensity)||1.6;
+  if(sun){
+    sun.intensity=Number(environment.sunIntensity)||2.3;
+    const elevation=THREE.MathUtils.degToRad(Number(environment.elevation)||28);
+    const azimuth=THREE.MathUtils.degToRad(Number(environment.azimuth)||180);
+    sun.position.set(Math.sin(azimuth)*Math.cos(elevation),Math.sin(elevation),Math.cos(azimuth)*Math.cos(elevation)).multiplyScalar(45);
+  }
+  if(sky){
+    const uniforms=sky.material.uniforms;
+    uniforms.turbidity.value=Number(environment.turbidity)||7;
+    uniforms.rayleigh.value=Number(environment.rayleigh)||2;
+    uniforms.mieCoefficient.value=.004;
+    uniforms.mieDirectionalG.value=.82;
+    const phi=THREE.MathUtils.degToRad(90-(Number(environment.elevation)||28));
+    const theta=THREE.MathUtils.degToRad(Number(environment.azimuth)||180);
+    uniforms.sunPosition.value.setFromSphericalCoords(1,phi,theta);
+  }
+  if(renderer){
+    renderer.toneMappingExposure=THREE.MathUtils.clamp(Number(environment.exposure)||1.05,.2,3);
+    if(bloomPass){bloomPass.enabled=Boolean(environment.bloom);bloomPass.strength=THREE.MathUtils.clamp(Number(environment.bloomStrength)||.35,0,2)}
+  }
+  if(environment.customSkybox&&Array.isArray(environment.customSkybox)&&environment.customSkybox.length===6){
+    const urls=environment.customSkybox.map(safeAssetUrl);
+    if(urls.every(Boolean)){
+      new THREE.CubeTextureLoader().load(urls,texture=>{texture.colorSpace=THREE.SRGBColorSpace;scene.background=texture;if(sky)sky.visible=false},undefined,()=>showError('The creator skybox could not be loaded.'));
+    }else showError('This creator skybox uses local files and is only available in the desktop Studio.');
+  }else if(sky)sky.visible=true;
+  if(environment.stars){
+    const positions=new Float32Array(900);
+    for(let i=0;i<positions.length;i++)positions[i]=(Math.random()-.5)*800;
+    const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+    const stars=new THREE.Points(geometry,new THREE.PointsMaterial({color:0xffffff,size:1.5,sizeAttenuation:false}));
+    scene.add(stars);
+  }
 }
 function renderScreenUi(items){
   const root=$('#play-ui');root.replaceChildren();
   if(!Array.isArray(items))return;
   for(const item of items){
-    const element=document.createElement(item.type==='TextButton'?'button':'div');
-    element.className='play-ui-item';element.textContent=item.text||item.name||item.type||'';
-    element.style.left=`${Math.max(0,Number(item.x)||0)}px`;element.style.top=`${Math.max(0,Number(item.y)||0)}px`;
-    element.style.width=`${Math.max(25,Number(item.width)||160)}px`;element.style.height=`${Math.max(20,Number(item.height)||42)}px`;
-    if(/^#[0-9a-f]{6}$/i.test(item.color||''))element.style.backgroundColor=`${item.color}dd`;
-    element.disabled=item.type==='TextButton';
+    if(item.visible===false)continue;
+    const button=item.kind==='TextButton';
+    const element=document.createElement(button?'button':'div');
+    element.className='play-ui-item';element.textContent=item.text||item.name||item.kind||'';
+    const position=Array.isArray(item.position)?item.position:[0,0],size=Array.isArray(item.size)?item.size:[200,60];
+    element.style.left=`${THREE.MathUtils.clamp(Number(position[0])||0,0,1280)/12.8}%`;
+    element.style.top=`${THREE.MathUtils.clamp(Number(position[1])||0,0,720)/7.2}%`;
+    element.style.width=`${THREE.MathUtils.clamp(Number(size[0])||200,25,1280)/12.8}%`;
+    element.style.height=`${THREE.MathUtils.clamp(Number(size[1])||60,20,720)/7.2}%`;
+    const uiColor=new THREE.Color(colorValue(item.color,'#6155b7')).getHexString();
+    element.style.backgroundColor=item.kind==='TextLabel'?'transparent':`#${uiColor}dd`;
+    if(button)element.addEventListener('click',()=>{message.textContent=`${item.name||'Button'} clicked.`;message.classList.add('visible');message.classList.remove('error')});
+    if(item.kind==='ImageLabel'){
+      const image=document.createElement('img');image.alt=item.name||'Creator image';image.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0';
+      element.textContent='';
+      const imageId=item.imageAssetId;
+      if(imageId)getAsset(imageId).then(asset=>{const url=safeAssetUrl(asset?.public_url);if(url)image.src=url;else showError(`Could not load UI image: ${item.name||'Image'}`)}).catch(error=>showError(error.message));
+      else if(item.imageUrl)image.src=safeAssetUrl(item.imageUrl)||'';
+      element.append(image);
+    }
     root.append(element);
   }
 }
 function resize(){
   if(!renderer||!camera)return;
   const width=stage.clientWidth,height=stage.clientHeight;
-  renderer.setSize(width,height,false);camera.aspect=width/Math.max(height,1);camera.updateProjectionMatrix();
+  if(!width||!height)return;
+  renderer.setSize(width,height,false);composer?.setSize(width,height);bloomPass?.setSize(width,height);
+  camera.aspect=width/Math.max(height,1);camera.updateProjectionMatrix();
+}
+function boundsForPlayer(x,y,z){
+  return new THREE.Box3(new THREE.Vector3(x-PLAYER_RADIUS,y,z-PLAYER_RADIUS),new THREE.Vector3(x+PLAYER_RADIUS,y+PLAYER_HEIGHT,z+PLAYER_RADIUS));
+}
+function collidesAt(x,y,z){
+  const playerBounds=boundsForPlayer(x,y,z);
+  return colliderBounds.some(bounds=>bounds.max.y>y+.05&&bounds.min.y<y+PLAYER_HEIGHT&&bounds.intersectsBox(playerBounds));
+}
+function tryStep(x,z){
+  if(!grounded)return false;
+  const top=colliderBounds
+    .filter(bounds=>bounds.max.y>player.position.y+.02&&bounds.max.y<=player.position.y+.45&&bounds.min.y<player.position.y+.2&&bounds.max.x>x-PLAYER_RADIUS&&bounds.min.x<x+PLAYER_RADIUS&&bounds.max.z>z-PLAYER_RADIUS&&bounds.min.z<z+PLAYER_RADIUS)
+    .reduce((highest,bounds)=>Math.max(highest,bounds.max.y),-Infinity);
+  if(!Number.isFinite(top)||collidesAt(x,top,z))return false;
+  player.position.y=top;jumpVelocity=0;return true;
+}
+function moveHorizontal(dx,dz){
+  let nextX=player.position.x+dx;
+  if(!collidesAt(nextX,player.position.y,player.position.z)||tryStep(nextX,player.position.z))player.position.x=nextX;
+  let nextZ=player.position.z+dz;
+  if(!collidesAt(player.position.x,player.position.y,nextZ)||tryStep(player.position.x,nextZ))player.position.z=nextZ;
+  player.position.x=THREE.MathUtils.clamp(player.position.x,-500,500);
+  player.position.z=THREE.MathUtils.clamp(player.position.z,-500,500);
+}
+function updateGround(deltaY){
+  if(jumpVelocity>0)return false;
+  const origin=new THREE.Vector3(player.position.x,player.position.y+.25,player.position.z);
+  const distance=Math.max(.3,-deltaY+.25);
+  const raycaster=new THREE.Raycaster(origin,new THREE.Vector3(0,-1,0),0,distance);
+  const hits=raycaster.intersectObjects(colliders,false);
+  const hit=hits.find(result=>result.face&&result.object.visible);
+  if(hit&&hit.distance<=-deltaY+.25){
+    player.position.y=origin.y-hit.distance;
+    jumpVelocity=0;return true;
+  }
+  return false;
+}
+function updateCeiling(deltaY){
+  if(deltaY<=0)return;
+  const origin=new THREE.Vector3(player.position.x,player.position.y+PLAYER_HEIGHT-.1,player.position.z);
+  const raycaster=new THREE.Raycaster(origin,new THREE.Vector3(0,1,0),0,deltaY+.12);
+  const hit=raycaster.intersectObjects(colliders,false).find(result=>result.face&&result.object.visible);
+  if(hit&&hit.distance<=deltaY+.1){player.position.y=origin.y+hit.distance-PLAYER_HEIGHT;jumpVelocity=0}
 }
 function animate(now=performance.now()){
   frame=requestAnimationFrame(animate);
   const delta=Math.min((now-lastFrameTime)/1000,.05);lastFrameTime=now;
+  if(!player)return;
   const direction=new THREE.Vector3(Number(held.has('right'))-Number(held.has('left')),0,Number(held.has('back'))-Number(held.has('forward')));
-  if(direction.lengthSq()){
-    direction.normalize();
-    const next=player.position.clone().addScaledVector(direction,7*delta);
-    next.x=THREE.MathUtils.clamp(next.x,-95,95);next.z=THREE.MathUtils.clamp(next.z,-95,95);
-    const playerBounds=new THREE.Box3(new THREE.Vector3(next.x-.42,next.y,next.z-.42),new THREE.Vector3(next.x+.42,next.y+2.7,next.z+.42));
-    if(!obstacles.some(bounds=>bounds.intersectsBox(playerBounds)))player.position.copy(next);
+  const moving=direction.lengthSq()>0;
+  if(moving){
+    direction.normalize();moveHorizontal(direction.x*7*delta,direction.z*7*delta);
     player.rotation.y=Math.atan2(direction.x,direction.z);
-    player.userData.limbs.forEach((limb,index)=>{limb.rotation.x=Math.sin(performance.now()*.012+(index%2)*Math.PI)*.42});
+    player.userData.limbs.forEach((limb,index)=>{limb.rotation.x=Math.sin(now*.012+(index%2)*Math.PI)*.42});
   }else player.userData.limbs.forEach(limb=>{limb.rotation.x*=.8});
-  player.position.y=Math.max(0,player.position.y+jumpVelocity*delta);
-  jumpVelocity-=20*delta;
-  if(player.position.y===0)jumpVelocity=0;
+  const deltaY=jumpVelocity*delta-.5*gravity*delta*delta;
+  jumpVelocity-=gravity*delta;
+  const wasGrounded=grounded;
+  player.position.y+=deltaY;
+  updateCeiling(deltaY);
+  grounded=updateGround(deltaY);
+  if(!grounded&&wasGrounded&&jumpVelocity<0)grounded=updateGround(0);
+  if(player.position.y< -100){player.position.copy(spawnPoint);jumpVelocity=0;grounded=false}
   const target=new THREE.Vector3(player.position.x,player.position.y+2,player.position.z);
   camera.position.lerp(new THREE.Vector3(target.x,target.y+4.5,target.z+9),Math.min(1,delta*4));
   camera.lookAt(target);
-  renderer.render(scene,camera);
+  if(bloomPass?.enabled)composer.render();
+  else renderer.render(scene,camera);
+}
+function readSpawn(snapshot,legacy){
+  const spawn=(snapshot.objects||[]).find(item=>item.kind==='spawn'&&item.visible!==false);
+  if(spawn){
+    const position=Array.isArray(spawn.position)?spawn.position:[0,0,0];
+    const size=Array.isArray(spawn.size)?spawn.size:[1,1,1];
+    return new THREE.Vector3(position[0]||0,(position[1]||0)+Math.max(.16,.08*(Number(size[1])||1)),position[2]||0);
+  }
+  const settings=snapshot.settings||{};
+  const configured=settings.spawn;
+  if(Array.isArray(configured)&&configured.length>=3)return new THREE.Vector3(...configured.slice(0,3).map(value=>Number(value)||0));
+  if(configured&&Array.isArray(configured.position))return new THREE.Vector3(...configured.position.slice(0,3).map(value=>Number(value)||0));
+  return legacy?new THREE.Vector3(0,0,6):new THREE.Vector3(0,2,6);
+}
+function addLegacyFloor(){
+  const floor=new THREE.Mesh(
+    new THREE.BoxGeometry(200,.2,200),
+    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,colorWrite:false,depthWrite:false})
+  );
+  floor.position.y=-.1;scene.add(floor);
+  registerCollider(floor,{kind:'block',anchored:true,visible:true});
 }
 async function loadPlace(){
   if(!placeId||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(placeId))throw new Error('This experience link is invalid.');
@@ -175,30 +384,51 @@ async function loadPlace(){
   $('#place-genre').textContent=place.genre||'All';
   $('#creator-link').href=`../users/${encodeURIComponent(place.owner_id)}`;
   document.title=`${place.name} · REWIND`;
-  const snapshot=typeof place.scene==='string'?JSON.parse(place.scene):place.scene;
-  const objects=Array.isArray(snapshot?.objects)?snapshot.objects:[];
-  for(const item of objects){
-    try{if(item.kind==='rig')addRig(item);else await addCatalogItem(item)}
+  const snapshot=typeof place.scene==='string'?JSON.parse(place.scene):place.scene||{};
+  const legacy=Number(snapshot.version||1)<2;
+  gravity=THREE.MathUtils.clamp(Number.isFinite(Number(snapshot.settings?.gravity))?Number(snapshot.settings.gravity):18,0,80);
+  spawnPoint=readSpawn(snapshot,legacy);
+  if(legacy)addLegacyFloor();
+  for(const item of Array.isArray(snapshot.objects)?snapshot.objects:[]){
+    try{if(item.kind==='rig')addRig(item,legacy);else await addCatalogItem(item,legacy)}
     catch(error){showError(`Some creator content could not load: ${error.message}`)}
   }
-  renderScreenUi(snapshot?.ui);
+  renderScreenUi(snapshot.ui);
   player=addAvatar();
+  grounded=updateGround(0);
   $('#player-canvas').focus({preventScroll:true});
   if(!message.classList.contains('error')){message.classList.remove('visible');message.textContent=''}
   animate();
 }
+function addRig(item,legacy=false){
+  const root=new THREE.Group(),skin=new THREE.MeshStandardMaterial({color:0x8e7ae3}),dark=new THREE.MeshStandardMaterial({color:0x39364e});
+  const torso=new THREE.Mesh(new THREE.BoxGeometry(1.25,1.5,.65),skin);torso.position.y=2.1;root.add(torso);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.51,20,16),new THREE.MeshStandardMaterial({color:0xf0c6aa}));head.position.y=3.25;root.add(head);
+  for(const [name,x,y,material] of [['LeftArm',-.88,2.35,skin],['RightArm',.88,2.35,skin],['LeftLeg',-.35,1,dark],['RightLeg',.35,1,dark]]){
+    const part=new THREE.Mesh(new THREE.BoxGeometry(name.includes('Arm')?.46:.53,name.includes('Arm')?1.15:1.2,.55),material);part.position.set(x,y-.47,0);root.add(part);
+  }
+  root.name=item.name||'AvatarRig';root.visible=item.visible!==false;applyTransform(root,item,legacy);scene.add(root);
+}
 try{
   renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x11131a);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-  scene=new THREE.Scene();scene.background=new THREE.Color(0x11131a);scene.fog=new THREE.Fog(0x11131a,35,100);
-  camera=new THREE.PerspectiveCamera(58,1,.1,400);
-  addFloor();new ResizeObserver(resize).observe(stage);resize();
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x9fb7d6);
+  camera=new THREE.PerspectiveCamera(58,1,.1,1200);
+  sky=new Sky();sky.scale.setScalar(450000);scene.add(sky);
+  composer=new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene,camera));
+  bloomPass=new UnrealBloomPass(new THREE.Vector2(1,1),.35,.65,.86);
+  composer.addPass(bloomPass);composer.addPass(new OutputPass());
+  addLighting();new ResizeObserver(resize).observe(stage);resize();
   document.addEventListener('keydown',onKeyDown);document.addEventListener('keyup',onKeyUp);window.addEventListener('blur',()=>held.clear());
   document.querySelectorAll('[data-control]').forEach(button=>{
     const control=button.dataset.control;
-    button.addEventListener('pointerdown',event=>{event.preventDefault();button.setPointerCapture(event.pointerId);if(control==='jump'&&player?.position.y<=.001)jumpVelocity=8;setControl(control,true)});
+    button.addEventListener('pointerdown',event=>{event.preventDefault();button.setPointerCapture(event.pointerId);if(control==='jump')jump();setControl(control,true)});
     for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,()=>setControl(control,false));
   });
   window.addEventListener('pagehide',()=>cancelAnimationFrame(frame));
   await loadPlace();
+  applyEnvironment(typeof place.scene==='string'?JSON.parse(place.scene).environment:place.scene?.environment);
 }catch(error){showError(error.message)}

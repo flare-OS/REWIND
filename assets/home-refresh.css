@@ -117,6 +117,8 @@
 .player-help{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);max-width:calc(100% - 24px);padding:8px 12px;border:1px solid #ffffff1a;border-radius:8px;background:#11131acc;color:#b9bbc7;font-size:10px;text-align:center;white-space:nowrap}
 .play-ui{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .play-ui-item{position:absolute;display:grid;place-items:center;overflow:hidden;padding:5px;border:1px solid #ffffff30;border-radius:5px;color:#fff;text-align:center;font-size:12px;white-space:normal;overflow-wrap:anywhere}
+.play-ui-item:enabled{pointer-events:auto;cursor:pointer}
+.play-ui-item img{pointer-events:none}
 .play-ui-item:disabled{opacity:1;cursor:default}
 .touch-controls{display:none}
 .world-info .world-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}

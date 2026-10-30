@@ -32,7 +32,7 @@ The desktop application uses a Studio-like ribbon, 3D viewport, Toolbox, Explore
 
 The API needs the schema applied before signup/login will work. Local static files can open without Neon, but account features require database credentials.
 
-The browser place player renders saved 3D objects and approved catalog assets with basic third-person movement. Experience scripts are stored by the prototype but are not executed in the browser player.
+The browser place player supports Studio v2 primitives, materials, transforms, visibility, model assets, StarterGui items, spawn points, lighting, sky/fog settings, stars, exposure, and bloom. Movement uses raycast ground/ceiling checks, step-up handling, gravity, jumping, and axis-resolved anchored-object colliders. Experience scripts are stored by the prototype but are not executed in the browser player. Model and image references retain approved asset IDs so the player can request fresh private-bucket preview URLs instead of relying on expired signed URLs.
 
 ## Deploy the frontend to GitHub Pages
 
