@@ -14,7 +14,7 @@ Legal pages are published at [`privacy.html`](privacy.html), [`terms-of-service.
 - A 3D avatar editor that saves avatar appearance.
 - Owner and Asset Mod admin panels for reviewing uploaded icons, thumbnails, audio, decals, and models. Owners can assign roles.
 - S3-compatible signed uploads. Neon is used for PostgreSQL data; it is not the file bucket.
-- Separate Games, Creator Catalog, News, Experiences, Plans, Upload, and Reports pages; News posts can be published by Owner and Asset Mod accounts, and each post has a share link with a generated REWIND Open Graph preview.
+- Separate Games, Creator Catalog, News, Experiences, Plans, Upload, and Reports pages. Published public places can be played in the browser at `/play/?id=<place-id>` with W/Z forward, S backward, D right, Q/A left, and Space to jump; News posts can be published by Owner and Asset Mod accounts with REWIND Open Graph share previews.
 - Public creator profiles are available at `/users/<user-id>` and show account-safe public details and published public experiences.
 - Experience privacy settings, friends-only access, a 12-day activity feed, Orb-priced gamepasses, and experience badges.
 - Owner controls to grant Orbs and change a user's plan.
@@ -31,6 +31,8 @@ The desktop application uses a Studio-like ribbon, 3D viewport, Toolbox, Explore
 6. Existing accounts created before age collection have no date of birth on file. Sign in, open **Family supervision**, and add an age before using age-gated features or approving a link.
 
 The API needs the schema applied before signup/login will work. Local static files can open without Neon, but account features require database credentials.
+
+The browser place player renders saved 3D objects and approved catalog assets with basic third-person movement. Experience scripts are stored by the prototype but are not executed in the browser player.
 
 ## Deploy the frontend to GitHub Pages
 

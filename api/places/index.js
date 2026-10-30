@@ -3,7 +3,17 @@ export default async function handler(req,res) {
   if (applyCors(req,res)) return;
   try {
     if (req.method === 'GET') {
-      const published = new URL(req.url,'http://local').searchParams.get('published') === 'true';
+      const params=new URL(req.url,'http://local').searchParams;
+      const placeId=params.get('id');
+      if(placeId){
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(placeId))return fail(res,400,'A valid experience ID is required.');
+        const viewer=await currentUser(req);
+        let supervisionAllowed=false;
+        if(viewer){const [access]=await sql()`SELECT (EXTRACT(YEAR FROM AGE(CURRENT_DATE,u.date_of_birth))>=15 OR EXISTS (SELECT 1 FROM supervision_links l WHERE l.child_user_id=u.id AND l.status='approved' AND l.supervisor_attested=true)) AS allowed FROM users u WHERE u.id=${viewer.id}`;supervisionAllowed=Boolean(access?.allowed)}
+        const [place]=await sql()`SELECT p.id,p.owner_id,p.name,p.description,p.genre,p.scene,p.privacy,p.requires_supervision,p.published,p.published_at,u.username AS owner_username,a.public_url AS icon_url FROM places p JOIN users u ON u.id=p.owner_id LEFT JOIN assets a ON a.id=p.icon_asset_id WHERE p.id=${placeId} AND p.published=true AND (p.privacy='public' OR (p.privacy='friends' AND EXISTS(SELECT 1 FROM friendships f WHERE f.user_id=p.owner_id AND f.friend_id=${viewer?.id||null} AND f.status='accepted'))) AND (a.id IS NULL OR a.status='approved') AND (p.requires_supervision=false OR ${supervisionAllowed})`;
+        return place?json(res,200,{place}):fail(res,404,'Experience not found.');
+      }
+      const published = params.get('published') === 'true';
       if (published) {
         const viewer=await currentUser(req);
         let supervisionAllowed=false;

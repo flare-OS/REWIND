@@ -37,6 +37,19 @@ export default async function handler(req,res) {
   try {
     if (req.method==='GET') {
       const params=new URL(req.url,'http://local').searchParams;
+      const assetId=params.get('id');
+      if(assetId){
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assetId))return fail(res,400,'A valid asset ID is required.');
+        const [asset]=await sql()`SELECT id,asset_type,name,public_url,object_key,mime_type FROM assets WHERE id=${assetId} AND status='approved' AND (public_url IS NOT NULL OR object_key IS NOT NULL)`;
+        if(!asset)return fail(res,404,'Approved asset not found.');
+        const {object_key,...publicAsset}=asset;
+        if(!publicAsset.public_url){
+          const storage=storageConfig();
+          if(!storage)return fail(res,503,'Private asset previews need S3-compatible read credentials configured on the API host.');
+          publicAsset.public_url=await getSignedUrl(storage.client,new GetObjectCommand({Bucket:storage.bucket,Key:object_key}),{expiresIn:3600});
+        }
+        return json(res,200,{asset:publicAsset});
+      }
       if (params.has('type') || params.get('catalog')==='true') return catalogHandler(req,res);
       const user=await requireUser(req,res); if (!user) return;
       const assets=await sql()`SELECT id,asset_type,name,description,public_url,mime_type,byte_size,status,created_at FROM assets WHERE owner_id=${user.id} ORDER BY created_at DESC LIMIT 100`;

@@ -9,7 +9,7 @@ function safeColor(value,fallback){return typeof value==='string'&&/^#[0-9a-f]{6
 
 function renderPlaces(places){
   const grid=$('#profile-places');
-  grid.innerHTML=places.map(place=>`<article class="world-card"><a class="profile-place-cover" href="../games/" aria-label="Explore ${escapeHtml(place.name)}">${place.icon_url?`<img src="${escapeHtml(place.icon_url)}" alt="" loading="lazy">`:'✧'}</a><div class="world-info"><b>${escapeHtml(place.name)}</b><p>${escapeHtml(place.genre||'All')} · ${new Date(place.published_at||Date.now()).toLocaleDateString()}</p></div></article>`).join('')||'<div class="empty-card games-empty"><div class="empty-icon">✧</div><h3>No public experiences yet</h3><p>This creator has not published a public place.</p></div>';
+  grid.innerHTML=places.map(place=>`<article class="world-card"><a class="profile-place-cover" href="../play/?id=${encodeURIComponent(place.id)}" aria-label="Play ${escapeHtml(place.name)}">${place.icon_url?`<img src="${escapeHtml(place.icon_url)}" alt="" loading="lazy">`:'✧'}</a><div class="world-info"><b>${escapeHtml(place.name)}</b><p>${escapeHtml(place.genre||'All')} · ${new Date(place.published_at||Date.now()).toLocaleDateString()}</p><div class="world-actions"><a class="button button-primary" href="../play/?id=${encodeURIComponent(place.id)}">Play</a></div></div></article>`).join('')||'<div class="empty-card games-empty"><div class="empty-icon">✧</div><h3>No public experiences yet</h3><p>This creator has not published a public place.</p></div>';
 }
 
 async function loadProfile(){

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#11131a">
+  <title>Play · REWIND</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/rewind-mark.svg">
+  <link rel="stylesheet" href="../assets/app.css">
+  <link rel="stylesheet" href="../assets/home-refresh.css">
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"}}</script>
+</head>
+<body class="place-player">
+  <header class="player-top">
+    <a class="brand" href="../games/"><img class="brand-mark-img" src="../assets/rewind-mark.svg" alt=""><span>REWIND</span></a>
+    <div class="player-title"><strong id="place-name">Loading experience…</strong><span id="place-owner"></span></div>
+    <a class="button button-outline" href="../games/">Leave</a>
+  </header>
+  <main class="player-layout">
+    <section class="player-stage" aria-label="Playable experience">
+      <canvas id="player-canvas" tabindex="0" aria-label="Game world. Use W or Z to walk forward, S backward, D right, Q or A left, and Space to jump."></canvas>
+      <div id="play-ui" class="play-ui" aria-live="polite"></div>
+      <div id="player-message" class="player-message" role="status">Loading experience…</div>
+      <div class="player-help">W / Z forward · S back · D right · Q / A left · Space jump</div>
+      <div class="touch-controls" aria-label="Touch controls">
+        <div class="touch-pad">
+          <button type="button" data-control="forward" aria-label="Move forward">▲</button>
+          <div><button type="button" data-control="left" aria-label="Move left">◀</button><button type="button" data-control="back" aria-label="Move back">▼</button><button type="button" data-control="right" aria-label="Move right">▶</button></div>
+        </div>
+        <button class="touch-jump" type="button" data-control="jump">Jump</button>
+      </div>
+    </section>
+    <aside class="player-sidebar">
+      <span class="eyebrow">NOW PLAYING</span>
+      <h1 id="sidebar-place-name">Experience</h1>
+      <p id="place-description">Loading creator experience.</p>
+      <p class="player-genre" id="place-genre"></p>
+      <p class="player-controls-copy">Walk around the creator's published world. Scripts are not executed in this preview player.</p>
+      <a id="creator-link" class="button button-outline" href="../games/">Browse more games</a>
+    </aside>
+  </main>
+  <script type="module" src="../assets/player.js"></script>
+</body>
+</html>

@@ -64,7 +64,15 @@ const server=createServer(async(req,res)=>{
     const body=await readFile(filePath);
     res.writeHead(200,{'Content-Type':mimeTypes[path.extname(filePath).toLowerCase()]||'application/octet-stream','X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});
     res.end(req.method==='HEAD'?undefined:body);
-  } catch { res.writeHead(404,{'Content-Type':'text/plain; charset=utf-8'}).end('Not found'); }
+  } catch {
+    try {
+      const notFound=await readFile(path.join(root,'404.html'));
+      res.writeHead(404,{'Content-Type':'text/html; charset=utf-8','X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});
+      res.end(req.method==='HEAD'?undefined:notFound);
+    } catch {
+      res.writeHead(404,{'Content-Type':'text/plain; charset=utf-8'}).end('Not found');
+    }
+  }
 });
 const host=process.env.HOST||(process.env.PORT?'0.0.0.0':'127.0.0.1');
 server.listen(port,host,()=>console.log(`REWIND server listening on ${host}:${port}`));
