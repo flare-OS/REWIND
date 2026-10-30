@@ -20,6 +20,12 @@
     <section class="player-stage" aria-label="Playable experience">
       <canvas id="player-canvas" tabindex="0" aria-label="Game world. Use W or Z to walk forward, S backward, D right, Q or A left, and Space to jump."></canvas>
       <div id="play-ui" class="play-ui" aria-live="polite"></div>
+      <button id="player-list-toggle" class="player-list-toggle" type="button" aria-expanded="false" aria-controls="player-list">Players <span id="player-count">1</span></button>
+      <section id="player-list" class="player-list" aria-label="Players" hidden>
+        <div class="player-list-heading"><strong>Players</strong><span>LOCAL PREVIEW</span></div>
+        <div id="player-list-content" class="player-list-content"></div>
+      </section>
+      <div id="script-status" class="script-status" role="status" hidden></div>
       <div id="player-message" class="player-message" role="status">Loading experience…</div>
       <div class="player-help">W / Z forward · S back · D right · Q / A left · Space jump</div>
       <div class="touch-controls" aria-label="Touch controls">
@@ -35,7 +41,7 @@
       <h1 id="sidebar-place-name">Experience</h1>
       <p id="place-description">Loading creator experience.</p>
       <p class="player-genre" id="place-genre"></p>
-      <p class="player-controls-copy">Walk around the creator's published world. Scripts are not executed in this preview player.</p>
+      <p class="player-controls-copy">Creator Luau scripts run in a browser-local sandbox. Script effects and leaderstats are simulated on this device only; they are not shared or authoritative.</p>
       <a id="creator-link" class="button button-outline" href="../games/">Browse more games</a>
     </aside>
   </main>
