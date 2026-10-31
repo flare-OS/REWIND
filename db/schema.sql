@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS places (
   icon_asset_id UUID,
   thumbnail_asset_id UUID,
   published BOOLEAN NOT NULL DEFAULT FALSE,
+  visits BIGINT NOT NULL DEFAULT 0 CHECK (visits >= 0),
   scene JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -79,6 +80,7 @@ CREATE TABLE IF NOT EXISTS places (
 );
 
 ALTER TABLE places ADD COLUMN IF NOT EXISTS requires_supervision BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE places ADD COLUMN IF NOT EXISTS visits BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE places ADD COLUMN IF NOT EXISTS privacy TEXT NOT NULL DEFAULT 'private' CHECK (privacy IN ('public','private','friends'));
 UPDATE places SET privacy=CASE WHEN published THEN 'public' ELSE 'private' END WHERE published=true AND privacy='private';
 

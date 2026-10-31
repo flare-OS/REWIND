@@ -1,0 +1,21 @@
+.rw-launch-overlay{position:fixed;inset:0;z-index:250;display:grid;place-items:center;padding:24px;background:#06070bc7;backdrop-filter:blur(16px);opacity:0;pointer-events:none;transition:opacity .22s ease}
+.rw-launch-overlay.open{opacity:1;pointer-events:auto}
+.rw-launch-card{position:relative;width:min(430px,100%);padding:30px 28px 26px;border:1px solid #383b4c;border-radius:20px;background:radial-gradient(ellipse at 50% -20%,#6f5de838,transparent 58%),linear-gradient(160deg,#1b1d28,#101118);box-shadow:0 30px 100px #000b,inset 0 1px #ffffff12;text-align:center;transform:translateY(12px) scale(.98);transition:transform .22s ease}
+.rw-launch-overlay.open .rw-launch-card{transform:translateY(0) scale(1)}
+.rw-launch-close{position:absolute;top:12px;right:12px;width:32px;height:32px;border:1px solid #ffffff14;border-radius:9px;background:#ffffff08;color:#c7c9d4;font-size:18px;line-height:1;cursor:pointer}
+.rw-launch-close:hover{background:#ffffff12;color:#fff}
+.rw-launch-brand{display:flex;align-items:center;justify-content:center;gap:11px;margin-bottom:21px}
+.rw-launch-brand img{width:46px;height:46px;display:block}
+.rw-launch-brand b{font:700 18px/1 'Space Grotesk','DM Sans',sans-serif;letter-spacing:.16em;color:#fff}
+.rw-launch-card h2{margin:0;font:600 23px/1.2 'Space Grotesk','DM Sans',sans-serif;letter-spacing:-.03em;color:#fff}
+.rw-launch-place{min-height:19px;margin:9px 0 22px;color:#aeb0bf;font-size:12px}
+.rw-launch-track{height:7px;overflow:hidden;border-radius:99px;background:#ffffff10;box-shadow:inset 0 1px 2px #0006}
+.rw-launch-track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8d7bff,#69ddd1);box-shadow:0 0 18px #8b7cff88;transition:width .45s cubic-bezier(.2,.7,.2,1)}
+.rw-launch-status{min-height:33px;margin:13px 0 0;color:#9397a7;font-size:11px;line-height:1.5}
+.rw-launch-actions{display:none;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:19px}
+.rw-launch-card.waiting .rw-launch-actions{display:flex}
+.rw-launch-card .button{cursor:pointer}
+.rw-launch-fallback{display:inline-flex;align-items:center;justify-content:center;padding:10px 15px;border:1px solid #343743;border-radius:9px;background:#171922;color:#dedfeb;font-size:12px;font-weight:700;transition:.18s ease}
+.rw-launch-fallback:hover{border-color:#8171ee;transform:translateY(-1px)}
+.rw-launch-note{margin-top:15px;color:#727686;font-size:10px}
+@media (max-width:520px){.rw-launch-card{padding:26px 20px 22px}.rw-launch-card h2{font-size:20px}}

@@ -577,6 +577,7 @@ async function loadPlace(){
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||`Could not load experience (${response.status}).`);
   place=data.place;
+  if(params.get('client')!=='1')fetch(`${apiBase}/api/places`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'visit',placeId}),credentials:'include'}).catch(()=>{});
   $('#place-name').textContent=place.name;$('#sidebar-place-name').textContent=place.name;
   $('#place-owner').textContent=`by ${place.owner_username}`;
   $('#place-description').textContent=place.description||'Explore this community-made world.';

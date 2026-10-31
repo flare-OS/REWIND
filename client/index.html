@@ -1,0 +1,55 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>Client · REWIND</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/rewind-mark.svg">
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+  <link rel="stylesheet" href="/assets/polish.css">
+  <link rel="stylesheet" href="/assets/home-refresh.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><img class="brand-mark-img" src="/assets/rewind-mark.svg" alt=""><span>REWIND</span></a>
+    <button class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav id="primary-nav" aria-label="Main navigation">
+      <a href="https://rwd.2bd.net/">Home</a><a href="https://rwd.2bd.net/games/">Games</a><a href="https://rwd.2bd.net/catalog/">Catalog</a><a href="https://rwd.2bd.net/news/">News</a><a href="https://rwd.2bd.net/experiences/">Experiences</a><a href="https://rwd.2bd.net/upload/">Upload</a><a href="https://rwd.2bd.net/avatar">Account</a>
+    </nav>
+    <div class="top-actions"></div>
+  </header>
+  <main id="not-found-page" class="not-found-shell">
+    <section class="not-found-card">
+      <div class="not-found-code">RCLIENT</div>
+      <h1>REWIND client</h1>
+      <p>Download REWIND client, brand new, fresh, optimized.</p>
+      <div class="not-found-actions"><a class="button button-primary" href="https://rwd.2bd.net/">Go home</a><a class="button button-outline" href="https://limewire.com/d/nQktr#pkMp0CniZG">Download Client</a></div>
+    </section>
+  </main>
+  <main id="profile-page" class="profile-shell" hidden>
+    <div id="profile-status" class="empty-state">Loading creator profile…</div>
+    <section id="profile-content" class="profile-content" hidden>
+      <header class="profile-header">
+        <div class="profile-avatar" id="profile-avatar" aria-hidden="true"><span></span></div>
+        <div class="profile-identity"><span class="eyebrow">REWIND CREATOR</span><h1 id="profile-name"></h1><p id="profile-meta"></p></div>
+        <button id="copy-profile" class="button button-outline" type="button">Copy profile link</button>
+      </header>
+      <section class="profile-section">
+        <div class="profile-section-heading"><div><span class="eyebrow">PUBLIC EXPERIENCES</span><h2>Places by this creator</h2></div><a class="button button-quiet" href="/games/">Explore games</a></div>
+        <div class="world-grid" id="profile-places"><div class="empty-state">Loading experiences…</div></div>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="/assets/mobile-nav.js"></script>
+  <script type="module">
+    if(/^\/users\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/?$/i.test(location.pathname)){
+      document.title='Creator profile · REWIND';
+      document.querySelector('#not-found-page').hidden=true;
+      document.querySelector('#profile-page').hidden=false;
+      await import('/assets/profile.js');
+    }
+  </script>
+</body>
+</html>

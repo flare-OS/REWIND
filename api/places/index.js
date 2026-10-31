@@ -10,26 +10,33 @@ export default async function handler(req,res) {
         const viewer=await currentUser(req);
         let supervisionAllowed=false;
         if(viewer){const [access]=await sql()`SELECT (EXTRACT(YEAR FROM AGE(CURRENT_DATE,u.date_of_birth))>=15 OR EXISTS (SELECT 1 FROM supervision_links l WHERE l.child_user_id=u.id AND l.status='approved' AND l.supervisor_attested=true)) AS allowed FROM users u WHERE u.id=${viewer.id}`;supervisionAllowed=Boolean(access?.allowed)}
-        const [place]=await sql()`SELECT p.id,p.owner_id,p.name,p.description,p.genre,p.scene,p.privacy,p.requires_supervision,p.published,p.published_at,u.username AS owner_username,a.public_url AS icon_url FROM places p JOIN users u ON u.id=p.owner_id LEFT JOIN assets a ON a.id=p.icon_asset_id WHERE p.id=${placeId} AND p.published=true AND (p.privacy='public' OR (p.privacy='friends' AND EXISTS(SELECT 1 FROM friendships f WHERE f.user_id=p.owner_id AND f.friend_id=${viewer?.id||null} AND f.status='accepted'))) AND (a.id IS NULL OR a.status='approved') AND (p.requires_supervision=false OR ${supervisionAllowed})`;
-        return place?json(res,200,{place}):fail(res,404,'Experience not found.');
+        const [place]=await sql()`SELECT p.id,p.owner_id,p.name,p.description,p.genre,p.visits,p.scene,p.privacy,p.requires_supervision,p.published,p.published_at,u.username AS owner_username,a.public_url AS icon_url FROM places p JOIN users u ON u.id=p.owner_id LEFT JOIN assets a ON a.id=p.icon_asset_id WHERE p.id=${placeId} AND p.published=true AND (p.privacy='public' OR (p.privacy='friends' AND EXISTS(SELECT 1 FROM friendships f WHERE f.user_id=p.owner_id AND f.friend_id=${viewer?.id||null} AND f.status='accepted'))) AND (a.id IS NULL OR a.status='approved') AND (p.requires_supervision=false OR ${supervisionAllowed})`;
+        return place?json(res,200,{place:{...place,visits:Number(place.visits)||0}}):fail(res,404,'Experience not found.');
       }
       const published = params.get('published') === 'true';
       if (published) {
         const viewer=await currentUser(req);
         let supervisionAllowed=false;
         if (viewer) { const [access]=await sql()`SELECT (EXTRACT(YEAR FROM AGE(CURRENT_DATE,u.date_of_birth))>=15 OR EXISTS (SELECT 1 FROM supervision_links l WHERE l.child_user_id=u.id AND l.status='approved' AND l.supervisor_attested=true)) AS allowed FROM users u WHERE u.id=${viewer.id}`; supervisionAllowed=Boolean(access?.allowed); }
-        const places = await sql()`SELECT p.id,p.owner_id,p.name,p.description,p.genre,p.published,p.privacy,p.requires_supervision,p.created_at,u.username AS owner_username,a.public_url AS icon_url FROM places p JOIN users u ON u.id=p.owner_id LEFT JOIN assets a ON a.id=p.icon_asset_id WHERE p.published=true AND (p.privacy='public' OR (p.privacy='friends' AND EXISTS(SELECT 1 FROM friendships f WHERE f.user_id=p.owner_id AND f.friend_id=${viewer?.id||null} AND f.status='accepted'))) AND (a.id IS NULL OR a.status='approved') AND (p.requires_supervision=false OR ${supervisionAllowed}) ORDER BY p.published_at DESC NULLS LAST LIMIT 48`;
-        return json(res,200,{places});
+        const places = await sql()`SELECT p.id,p.owner_id,p.name,p.description,p.genre,p.visits,p.published,p.privacy,p.requires_supervision,p.created_at,u.username AS owner_username,a.public_url AS icon_url FROM places p JOIN users u ON u.id=p.owner_id LEFT JOIN assets a ON a.id=p.icon_asset_id WHERE p.published=true AND (p.privacy='public' OR (p.privacy='friends' AND EXISTS(SELECT 1 FROM friendships f WHERE f.user_id=p.owner_id AND f.friend_id=${viewer?.id||null} AND f.status='accepted'))) AND (a.id IS NULL OR a.status='approved') AND (p.requires_supervision=false OR ${supervisionAllowed}) ORDER BY p.published_at DESC NULLS LAST LIMIT 48`;
+        return json(res,200,{places:places.map(place=>({...place,visits:Number(place.visits)||0}))});
       }
       const user=await requireUser(req,res); if (!user) return;
-      const places=await sql()`SELECT p.id,p.name,p.description,p.genre,p.published,p.privacy,p.requires_supervision,p.scene,p.icon_asset_id,p.thumbnail_asset_id,p.created_at,p.updated_at,a.public_url AS icon_url,t.public_url AS thumbnail_url FROM places p LEFT JOIN assets a ON a.id=p.icon_asset_id LEFT JOIN assets t ON t.id=p.thumbnail_asset_id WHERE p.owner_id=${user.id} ORDER BY p.updated_at DESC`;
-      return json(res,200,{places});
+      const places=await sql()`SELECT p.id,p.name,p.description,p.genre,p.visits,p.published,p.privacy,p.requires_supervision,p.scene,p.icon_asset_id,p.thumbnail_asset_id,p.created_at,p.updated_at,a.public_url AS icon_url,t.public_url AS thumbnail_url FROM places p LEFT JOIN assets a ON a.id=p.icon_asset_id LEFT JOIN assets t ON t.id=p.thumbnail_asset_id WHERE p.owner_id=${user.id} ORDER BY p.updated_at DESC`;
+      return json(res,200,{places:places.map(place=>({...place,visits:Number(place.visits)||0}))});
     }
     if (req.method === 'POST') {
+      const data=body(req);
+      if (String(data.action||'')==='visit') {
+        const visitPlaceId=String(data.placeId||data.id||'');
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(visitPlaceId))return fail(res,400,'A valid experience ID is required.');
+        const [visited]=await sql()`UPDATE places SET visits=visits+1 WHERE id=${visitPlaceId} AND published=true RETURNING visits`;
+        return visited?json(res,200,{visits:Number(visited.visits)||0}):fail(res,404,'Experience not found.');
+      }
       const user=await requireUser(req,res); if (!user) return;
       const [[account]]=await Promise.all([sql()`SELECT plan,created_at FROM users WHERE id=${user.id}`]);
       if(account.plan==='free'&&new Date(account.created_at).getTime()+86400000>Date.now())return fail(res,403,'Free accounts must wait 1 day after signup before creating a place.');
-      const data=body(req), name=String(data.name||'').trim();
+      const name=String(data.name||'').trim();
       if (name.length < 1 || name.length > 60) return fail(res,400,'Place name must be 1–60 characters.');
       const description=String(data.description||'').slice(0,2000), genre=String(data.genre||'All').slice(0,40);
       const privacy=['public','private','friends'].includes(data.privacy)?data.privacy:'private';
